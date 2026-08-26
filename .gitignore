@@ -8,3 +8,12 @@ venv/
 
 # FastAPI
 .pytest_cache/
+# Student feedback data — must never be committed
+data/
+
+# Secrets
+.env
+.env.local
+
+# macOS
+.DS_Store
