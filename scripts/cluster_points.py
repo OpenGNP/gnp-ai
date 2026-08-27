@@ -93,11 +93,27 @@ def build_configs(n_docs: int) -> list[int]:
     return [m for m in (2, 3, 4, 5, 6, 7, 8, 10) if m < n_docs // 2]
 
 
+def _topic_representation():
+    """ตัวสกัดคำเด่นของ topic
+
+    ตัด stopword สำคัญมากกับ corpus เล็ก ไม่งั้น c-TF-IDF จะดึง function word
+    ขึ้นมาเป็นคำเด่น แล้วทุก topic จะได้ชื่อคล้ายกันหมด
+
+    แยกออกมาเป็นฟังก์ชันเพราะต้องใช้ทั้งตอน fit และตอน update_topics —
+    ถ้าไม่ส่งให้ update_topics มันจะกลับไปใช้ค่า default ที่ไม่ตัด stopword
+    """
+    from bertopic.vectorizers import ClassTfidfTransformer
+    from sklearn.feature_extraction.text import CountVectorizer
+
+    return (
+        CountVectorizer(stop_words="english", min_df=1, ngram_range=(1, 2)),
+        ClassTfidfTransformer(reduce_frequent_words=True),
+    )
+
+
 def fit(min_cluster_size: int, docs: list[str], embeddings: np.ndarray):
     from bertopic import BERTopic
-    from bertopic.vectorizers import ClassTfidfTransformer
     from hdbscan import HDBSCAN
-    from sklearn.feature_extraction.text import CountVectorizer
     from umap import UMAP
 
     n_docs = len(docs)
@@ -112,21 +128,39 @@ def fit(min_cluster_size: int, docs: list[str], embeddings: np.ndarray):
         prediction_data=True,
     )
 
+    vectorizer, ctfidf = _topic_representation()
     model = BERTopic(
         umap_model=UMAP(
             n_neighbors=n_neighbors, n_components=5, min_dist=0.0,
             metric="cosine", random_state=SEED,
         ),
         hdbscan_model=cluster_model,
-        # ตัด stopword สำคัญมากกับ corpus เล็ก ไม่งั้น c-TF-IDF จะดึง function word
-        # ขึ้นมาเป็นคำเด่น แล้วทุก topic จะได้ชื่อคล้ายกันหมด
-        vectorizer_model=CountVectorizer(stop_words="english", min_df=1, ngram_range=(1, 2)),
-        ctfidf_model=ClassTfidfTransformer(reduce_frequent_words=True),
+        vectorizer_model=vectorizer,
+        ctfidf_model=ctfidf,
         calculate_probabilities=False,
         verbose=False,
     )
     labels, _ = model.fit_transform(docs, embeddings)
     return model, [int(x) for x in labels]
+
+
+def reduce_outliers(model, docs, labels, embeddings):
+    """ย้ายจุดที่ถูกทิ้งไปยัง topic ที่ embedding ใกล้ที่สุด
+
+    HDBSCAN ทิ้งจุดที่อยู่ขอบความหนาแน่นเป็น noise แม้ว่าโดยความหมายแล้วจุดนั้น
+    ชัดเจนว่าอยู่กลุ่มไหน เช่น "SIT staffs respond a bit slow" ถูกทิ้งทั้งที่มี
+    กลุ่ม staff อยู่แล้ว การทิ้งแบบนี้ทำให้ topic frequency ต่ำกว่าความจริง
+    ซึ่งกระทบ priority โดยตรง
+
+    ขั้นนี้จึงเก็บโครงสร้างกลุ่มที่ HDBSCAN หาได้ไว้ แล้วค่อยจัดจุดที่เหลือ
+    เข้ากลุ่มตามความใกล้ทางความหมาย
+    """
+    reduced = model.reduce_outliers(docs, labels, strategy="embeddings", embeddings=embeddings)
+    # ต้องคำนวณ c-TF-IDF ใหม่ ไม่งั้นชื่อกลุ่มยังเป็นของสมาชิกชุดเดิมก่อนย้าย
+    # และต้องส่ง vectorizer ตัวเดิมไปด้วย ไม่งั้นจะกลับไปใช้ค่า default ที่ไม่ตัด stopword
+    vectorizer, ctfidf = _topic_representation()
+    model.update_topics(docs, topics=reduced, vectorizer_model=vectorizer, ctfidf_model=ctfidf)
+    return [int(x) for x in reduced]
 
 
 def evaluate(model, labels, docs) -> dict:
@@ -145,6 +179,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--examples", type=int, default=0, help="จำนวนตัวอย่างข้อความต่อ topic")
     ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2")
+    ap.add_argument("--reduce-outliers", action="store_true",
+                    help="ย้ายจุดที่ถูกทิ้งไปยัง topic ที่ใกล้ที่สุด")
     args = ap.parse_args()
 
     # 1. แตกเฉลยออกเป็น atomic points รายจุด
@@ -177,8 +213,11 @@ def main() -> None:
     for mcs in configs:
         try:
             model, labels = fit(mcs, docs, embeddings)
-            results.append({"mcs": mcs, **evaluate(model, labels, docs),
-                            "_model": model, "_labels": labels})
+            row = {"mcs": mcs, "outlier_before": sum(1 for t in labels if t == -1)}
+            if args.reduce_outliers:
+                labels = reduce_outliers(model, docs, labels, embeddings)
+            row |= evaluate(model, labels, docs)
+            results.append(row | {"_model": model, "_labels": labels})
         except Exception as exc:
             results.append({"mcs": mcs, "error": f"{type(exc).__name__}: {exc}"})
 
