@@ -281,11 +281,16 @@ def main() -> None:
                 print(f"        - {text if args.full_text else text[:88]}")
 
         total_m, total_r = summary.mentions.sum(), assigned.feedback_id.nunique()
-        n_out = (points.topic == -1).sum()
+        outliers = points[points.topic == -1]
         median_reach = summary.reach.median()
         print(f"  {'-' * 70}")
-        print(f"  รวม {total_m} จุด / {total_r} คน · ไม่เข้ากลุ่ม {n_out} จุด · "
+        print(f"  รวม {total_m} จุด / {total_r} คน · ไม่เข้ากลุ่ม {len(outliers)} จุด · "
               f"reach กลางของกลุ่ม {median_reach:.0f} คน")
+
+        if len(outliers):
+            print(f"\n  [ไม่เข้ากลุ่มไหนเลย]")
+            for text in outliers.text.head(args.examples):
+                print(f"        - {text if args.full_text else text[:88]}")
 
     print(f"\nบันทึกตารางที่ {out_csv}")
     print("\nวิธีเลือก: npmi สูงอย่างเดียวไม่พอ เพราะกลุ่มยิ่งเล็กยิ่งได้ npmi สูงโดยธรรมชาติ")
