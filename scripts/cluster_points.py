@@ -7,7 +7,10 @@
 
 ใช้:
     python scripts/cluster_points.py
-    python scripts/cluster_points.py --examples 2
+    python scripts/cluster_points.py --mcs 5 --split-large 15
+
+ค่าเริ่มต้นแสดงข้อความเต็มทุกจุดในทุก topic (ไม่ใช่แค่ตัวอย่าง) ใช้ --examples
+จำกัดจำนวน หรือ --truncate จำกัดความยาวถ้าอยากได้แค่ภาพรวมคร่าว ๆ
 """
 
 from __future__ import annotations
@@ -293,10 +296,10 @@ def main() -> None:
     ap.add_argument("--mcs", type=int, nargs="+", default=None, metavar="N",
                     help="ค่า min_cluster_size ที่จะลอง เช่น --mcs 5 หรือ --mcs 3 5 8 "
                          "(ไม่ใส่ = ลองทุกค่า)")
-    ap.add_argument("--examples", type=int, default=0, metavar="N",
-                    help="แสดงข้อความจริงในแต่ละ topic กี่ข้อความ (ใส่ 99 = แสดงหมด)")
-    ap.add_argument("--full-text", action="store_true",
-                    help="แสดงข้อความตัวอย่างเต็ม ไม่ตัดที่ 88 ตัวอักษร")
+    ap.add_argument("--examples", type=int, default=None, metavar="N",
+                    help="จำกัดจำนวนข้อความที่แสดงต่อ topic (ไม่ใส่ = แสดงทุกข้อความ)")
+    ap.add_argument("--truncate", type=int, default=None, metavar="N",
+                    help="ตัดข้อความตัวอย่างที่ N ตัวอักษร (ไม่ใส่ = แสดงเต็มเสมอ)")
     ap.add_argument("--reduce-outliers", action="store_true",
                     help="ย้ายจุดที่ HDBSCAN ทิ้งไปยัง topic ที่ใกล้ที่สุด แทนที่จะปล่อยทิ้ง "
                          "(เฉพาะที่ cosine similarity >= --outlier-threshold)")
@@ -391,61 +394,86 @@ def _run(args, points, docs) -> None:
         print(f"{r['mcs']:>4}  {r['n_topics']:>6}  {r['outlier_rate']:>7.1%}  "
               f"{n_out:>8} จุด  {r['npmi']:>+7.3f}  {r['diversity']:>9.2f}")
 
+    def take(series, n):
+        return series if n is None else series.head(n)
+
+    def fmt(text):
+        return text if args.truncate is None else text[: args.truncate]
+
     # 4. รายละเอียดของทุกค่า
     for r in results:
         if "error" in r:
             continue
         model, labels = r["_model"], r["_labels"]
-        points["topic"] = labels
+        points["topic"] = labels  # coarse label หลัง fit (และหลัง reduce_outliers ถ้าเปิด)
+        assigned = points[points.topic != -1]
 
-        sub_words: dict[str, list[str]] = {}
-        if args.split_large:
-            sub_topic, sub_words = split_large_topics(model, points, embeddings, args.split_large)
-            points["topic"] = sub_topic
-            group_col = points["topic"]
-            is_outlier = group_col == "-1"
-        else:
-            group_col = points["topic"]
-            is_outlier = group_col == -1
-
-        assigned = points[~is_outlier]
-
-        summary = (
+        coarse = (
             assigned.groupby("topic")
             .agg(mentions=("text", "size"), reach=("feedback_id", "nunique"))
             .sort_values("reach", ascending=False)
         )
 
+        # แยกเก็บ label ละเอียด (fine) ไว้ต่างหาก ไม่ทับ points["topic"] เดิม
+        # เพื่อให้ยังอ้างอิงกลุ่มก่อนแตก (coarse) ไปพร้อมกับกลุ่มหลังแตก (fine) ได้ในลูปเดียว
+        fine_topic, sub_words = (None, {})
+        if args.split_large:
+            fine_topic, sub_words = split_large_topics(model, points, embeddings, args.split_large)
+
         print("\n" + "=" * 74)
         print(f"min_cluster_size = {r['mcs']}   ({r['n_topics']} topics · "
               f"outlier {r['outlier_rate']:.1%} · npmi {r['npmi']:+.3f})")
-        if args.split_large:
-            print(f"(แสดงแบบแตกกลุ่มใหญ่ — จำนวน topic ที่เห็นด้านล่างมากกว่า {r['n_topics']} ข้างต้น)")
         print("=" * 74)
 
-        for topic_id, stat in summary.iterrows():
-            if topic_id in sub_words:
-                words = sub_words[topic_id]
-            else:
-                base_id = int(str(topic_id).split(".")[0])
-                words = [w for w, _ in model.get_topic(base_id)][:5]
+        for topic_id, stat in coarse.iterrows():
+            words = [w for w, _ in model.get_topic(topic_id)][:5]
             inflation = stat.mentions / stat.reach
             flag = f"  เฟ้อ {inflation:.2f}x" if inflation > 1.01 else ""
-            print(f"  {stat.mentions:>3} จุด /{stat.reach:>3} คน{flag:>12}  {', '.join(words)}")
-            for text in assigned[assigned.topic == topic_id].text.head(args.examples):
-                print(f"        - {text if args.full_text else text[:88]}")
+            members = assigned[assigned.topic == topic_id]
 
-        total_m, total_r = summary.mentions.sum(), assigned.feedback_id.nunique()
-        outliers = points[is_outlier]
-        median_reach = summary.reach.median()
-        print(f"  {'-' * 70}")
+            will_split = fine_topic is not None and stat.mentions >= args.split_large
+            tag = "  [ก่อนแตกกลุ่ม]" if will_split else ""
+
+            print(f"\n  {stat.mentions:>3} จุด /{stat.reach:>3} คน{flag:>12}  {', '.join(words)}{tag}")
+            for text in take(members.text, args.examples):
+                print(f"        - {fmt(text)}")
+
+            if not will_split:
+                continue
+
+            # หลังแตกกลุ่ม: จับกลุ่มซ้ำเฉพาะสมาชิกก้อนนี้ เทียบกับก้อนเดิมด้านบน
+            local_fine = fine_topic.loc[members.index]
+            sub_ids = sorted(
+                local_fine.unique(),
+                key=lambda k: -members.loc[local_fine == k, "feedback_id"].nunique(),
+            )
+            if len(sub_ids) <= 1:
+                # แตกไม่ได้จริง เนื้อหาเป็นเนื้อเดียวกันหมด ไม่พิมพ์ซ้ำของเดิม
+                print("        ↓ แตกกลุ่มย่อยไม่ได้ [หลังแตกกลุ่ม] — เนื้อหาไม่แยกจากกันพอ")
+                continue
+            print(f"        ↓ แตกเป็น {len(sub_ids)} กลุ่มย่อย [หลังแตกกลุ่ม]")
+            for sid in sub_ids:
+                sub_members = members[local_fine == sid]
+                sub_mentions, sub_reach = len(sub_members), sub_members.feedback_id.nunique()
+                sub_inflation = sub_mentions / sub_reach
+                sub_flag = f"  เฟ้อ {sub_inflation:.2f}x" if sub_inflation > 1.01 else ""
+                sub_word_list = sub_words.get(sid) or words  # เหลือไม่แยกกลุ่ม -> ใช้คำของก้อนเดิม
+                print(f"          {sub_mentions:>3} จุด /{sub_reach:>3} คน{sub_flag:>12}  "
+                      f"{', '.join(sub_word_list)}")
+                for text in take(sub_members.text, args.examples):
+                    print(f"              - {fmt(text)}")
+
+        total_m, total_r = coarse.mentions.sum(), assigned.feedback_id.nunique()
+        outliers = points[points.topic == -1]
+        median_reach = coarse.reach.median()
+        print(f"\n  {'-' * 70}")
         print(f"  รวม {total_m} จุด / {total_r} คน · ไม่เข้ากลุ่ม {len(outliers)} จุด · "
               f"reach กลางของกลุ่ม {median_reach:.0f} คน")
 
         if len(outliers):
             print(f"\n  [ไม่เข้ากลุ่มไหนเลย]")
-            for text in outliers.text.head(args.examples):
-                print(f"        - {text if args.full_text else text[:88]}")
+            for text in take(outliers.text, args.examples):
+                print(f"        - {fmt(text)}")
 
     print(f"\nบันทึกตารางที่ {out_csv}")
     print("\nวิธีเลือก: npmi สูงอย่างเดียวไม่พอ เพราะกลุ่มยิ่งเล็กยิ่งได้ npmi สูงโดยธรรมชาติ")
