@@ -144,23 +144,94 @@ def fit(min_cluster_size: int, docs: list[str], embeddings: np.ndarray):
     return model, [int(x) for x in labels]
 
 
-def reduce_outliers(model, docs, labels, embeddings):
-    """ย้ายจุดที่ถูกทิ้งไปยัง topic ที่ embedding ใกล้ที่สุด
+def reduce_outliers(model, docs, labels, embeddings, threshold=0.30):
+    """ย้ายจุดที่ถูกทิ้งไปยัง topic ที่ embedding ใกล้ที่สุด เฉพาะที่ใกล้พอ
 
     HDBSCAN ทิ้งจุดที่อยู่ขอบความหนาแน่นเป็น noise แม้ว่าโดยความหมายแล้วจุดนั้น
     ชัดเจนว่าอยู่กลุ่มไหน เช่น "SIT staffs respond a bit slow" ถูกทิ้งทั้งที่มี
     กลุ่ม staff อยู่แล้ว การทิ้งแบบนี้ทำให้ topic frequency ต่ำกว่าความจริง
     ซึ่งกระทบ priority โดยตรง
 
-    ขั้นนี้จึงเก็บโครงสร้างกลุ่มที่ HDBSCAN หาได้ไว้ แล้วค่อยจัดจุดที่เหลือ
-    เข้ากลุ่มตามความใกล้ทางความหมาย
+    แต่บางจุดก็ไม่มีกลุ่มให้อยู่จริง ๆ เขียนเอง (ไม่ใช้ model.reduce_outliers)
+    เพื่อกำหนด threshold เอง — วัดจากข้อมูลจริงแล้วว่า cosine similarity ต่อ
+    centroid ที่ใกล้สุด ~0.30 คือจุดแบ่งที่กันเคสย้ายผิดกลุ่มได้ (เช่น
+    "The AC is sometimes too loud" ที่คะแนน 0.298 เคยถูกย้ายเข้ากลุ่ม wifi ผิด ๆ)
+    โดยยังคงเคสที่ควรย้ายจริงไว้ได้เกือบหมด ต่ำกว่านี้ปล่อยเป็น noise ต่อไป
     """
-    reduced = model.reduce_outliers(docs, labels, strategy="embeddings", embeddings=embeddings)
+    labels = np.asarray(labels)
+    topic_ids = sorted(t for t in set(labels) if t != -1)
+    if not topic_ids:
+        return labels.tolist()
+
+    centroids = np.stack([embeddings[labels == t].mean(axis=0) for t in topic_ids])
+    centroids /= np.linalg.norm(centroids, axis=1, keepdims=True)
+
+    new_labels = labels.copy()
+    for i in np.where(labels == -1)[0]:
+        sims = centroids @ embeddings[i]
+        best = int(np.argmax(sims))
+        if sims[best] >= threshold:
+            new_labels[i] = topic_ids[best]
+
+    new_labels = [int(x) for x in new_labels]
     # ต้องคำนวณ c-TF-IDF ใหม่ ไม่งั้นชื่อกลุ่มยังเป็นของสมาชิกชุดเดิมก่อนย้าย
     # และต้องส่ง vectorizer ตัวเดิมไปด้วย ไม่งั้นจะกลับไปใช้ค่า default ที่ไม่ตัด stopword
     vectorizer, ctfidf = _topic_representation()
-    model.update_topics(docs, topics=reduced, vectorizer_model=vectorizer, ctfidf_model=ctfidf)
-    return [int(x) for x in reduced]
+    model.update_topics(docs, topics=new_labels, vectorizer_model=vectorizer, ctfidf_model=ctfidf)
+    return new_labels
+
+
+def top_words(docs: list[str], k: int = 5) -> list[str]:
+    """คำ/วลีเด่นของ docs กลุ่มหนึ่ง ใช้ตอนตั้งชื่อ sub-topic ที่ไม่ได้อยู่ในโมเดลหลัก"""
+    from sklearn.feature_extraction.text import CountVectorizer
+
+    vec = CountVectorizer(stop_words="english", ngram_range=(1, 2), min_df=1)
+    try:
+        counts = vec.fit_transform(docs)
+    except ValueError:
+        return []
+    freq = np.asarray(counts.sum(axis=0)).ravel()
+    vocab = vec.get_feature_names_out()
+    order = np.argsort(-freq)[:k]
+    return [vocab[i] for i in order]
+
+
+def split_large_topics(model, points: pd.DataFrame, embeddings: np.ndarray, min_size: int):
+    """จับกลุ่มซ้ำเฉพาะข้างในกลุ่มที่ใหญ่เกินไป เพื่อดึงรายละเอียดย่อยออกมา
+
+    กลุ่มอย่าง "courses, curriculum" ใช้คำคล้ายกันจนรวมประเด็นย่อยที่ต่างกันจริง
+    ไว้ด้วยกัน (ความเร็วสอน, เนื้อหาตกยุค, อยากได้ lab จริง ฯลฯ) การจับกลุ่มซ้ำ
+    เฉพาะสมาชิกกลุ่มนั้นด้วย min_cluster_size เล็กลง จะดึงรายละเอียดที่ถูกกลืน
+    ไว้ออกมาโดยไม่กระทบกลุ่มอื่นที่แยกดีอยู่แล้ว
+
+    ใช้ UMAP embedding ที่คำนวณไว้แล้วจากรอบแรก (model.umap_model.embedding_)
+    ไม่ต้องคำนวณใหม่ และเรียงตามลำดับเดียวกับ points เพราะเป็นอินพุตชุดเดียวกัน
+    """
+    from hdbscan import HDBSCAN
+
+    reduced = model.umap_model.embedding_
+    sub_topic = points["topic"].astype(str).copy()
+    sub_words: dict[str, list[str]] = {}
+
+    assigned = points[points.topic != -1]
+    for topic_id, group in assigned.groupby("topic"):
+        if len(group) < min_size:
+            continue
+        idx = group.index.to_numpy()
+        sub_mcs = max(2, len(idx) // 6)
+        sub_labels = HDBSCAN(min_cluster_size=sub_mcs, metric="euclidean").fit_predict(reduced[idx])
+
+        for pos, lab in zip(idx, sub_labels):
+            if lab != -1:
+                sub_topic.loc[pos] = f"{topic_id}.{lab}"
+
+        for lab in set(sub_labels):
+            if lab == -1:
+                continue
+            key = f"{topic_id}.{lab}"
+            sub_words[key] = top_words(points.loc[idx[sub_labels == lab], "text"].tolist())
+
+    return sub_topic, sub_words
 
 
 def evaluate(model, labels, docs) -> dict:
@@ -185,7 +256,14 @@ def main() -> None:
     ap.add_argument("--full-text", action="store_true",
                     help="แสดงข้อความตัวอย่างเต็ม ไม่ตัดที่ 88 ตัวอักษร")
     ap.add_argument("--reduce-outliers", action="store_true",
-                    help="ย้ายจุดที่ HDBSCAN ทิ้งไปยัง topic ที่ใกล้ที่สุด แทนที่จะปล่อยทิ้ง")
+                    help="ย้ายจุดที่ HDBSCAN ทิ้งไปยัง topic ที่ใกล้ที่สุด แทนที่จะปล่อยทิ้ง "
+                         "(เฉพาะที่ cosine similarity >= --outlier-threshold)")
+    ap.add_argument("--outlier-threshold", type=float, default=0.30, metavar="X",
+                    help="ค่า cosine similarity ขั้นต่ำที่จะย้าย outlier เข้ากลุ่ม "
+                         "(ค่าเริ่มต้น 0.30 วัดจากข้อมูลจริงว่าแยกเคสย้ายถูก/ผิดได้ดี)")
+    ap.add_argument("--split-large", type=int, default=None, metavar="N",
+                    help="จับกลุ่มซ้ำเฉพาะกลุ่มที่มีสมาชิก >= N เพื่อดึงรายละเอียดย่อยออกมา "
+                         "เช่น --split-large 15")
     ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2",
                     help="โมเดล sentence-transformers ที่ใช้ทำ embedding")
     args = ap.parse_args()
@@ -222,7 +300,10 @@ def main() -> None:
         print("ไม่เหลือค่าให้ลอง")
         return
 
-    mode = "ย้าย outlier เข้ากลุ่มใกล้สุด" if args.reduce_outliers else "ปล่อย outlier ทิ้ง"
+    mode = (f"ย้าย outlier เข้ากลุ่มใกล้สุด (threshold {args.outlier_threshold})"
+            if args.reduce_outliers else "ปล่อย outlier ทิ้ง")
+    if args.split_large:
+        mode += f"  ·  แตกกลุ่มที่มี >= {args.split_large} จุด"
     print(f"ทดลอง min_cluster_size {configs}  ·  {mode}\n")
 
     results = []
@@ -231,7 +312,7 @@ def main() -> None:
             model, labels = fit(mcs, docs, embeddings)
             row = {"mcs": mcs, "outlier_before": sum(1 for t in labels if t == -1)}
             if args.reduce_outliers:
-                labels = reduce_outliers(model, docs, labels, embeddings)
+                labels = reduce_outliers(model, docs, labels, embeddings, args.outlier_threshold)
             row |= evaluate(model, labels, docs)
             results.append(row | {"_model": model, "_labels": labels})
         except Exception as exc:
@@ -259,7 +340,18 @@ def main() -> None:
             continue
         model, labels = r["_model"], r["_labels"]
         points["topic"] = labels
-        assigned = points[points.topic != -1]
+
+        sub_words: dict[str, list[str]] = {}
+        if args.split_large:
+            sub_topic, sub_words = split_large_topics(model, points, embeddings, args.split_large)
+            points["topic"] = sub_topic
+            group_col = points["topic"]
+            is_outlier = group_col == "-1"
+        else:
+            group_col = points["topic"]
+            is_outlier = group_col == -1
+
+        assigned = points[~is_outlier]
 
         summary = (
             assigned.groupby("topic")
@@ -270,10 +362,16 @@ def main() -> None:
         print("\n" + "=" * 74)
         print(f"min_cluster_size = {r['mcs']}   ({r['n_topics']} topics · "
               f"outlier {r['outlier_rate']:.1%} · npmi {r['npmi']:+.3f})")
+        if args.split_large:
+            print(f"(แสดงแบบแตกกลุ่มใหญ่ — จำนวน topic ที่เห็นด้านล่างมากกว่า {r['n_topics']} ข้างต้น)")
         print("=" * 74)
 
         for topic_id, stat in summary.iterrows():
-            words = [w for w, _ in model.get_topic(topic_id)][:5]
+            if topic_id in sub_words:
+                words = sub_words[topic_id]
+            else:
+                base_id = int(str(topic_id).split(".")[0])
+                words = [w for w, _ in model.get_topic(base_id)][:5]
             inflation = stat.mentions / stat.reach
             flag = f"  เฟ้อ {inflation:.2f}x" if inflation > 1.01 else ""
             print(f"  {stat.mentions:>3} จุด /{stat.reach:>3} คน{flag:>12}  {', '.join(words)}")
@@ -281,7 +379,7 @@ def main() -> None:
                 print(f"        - {text if args.full_text else text[:88]}")
 
         total_m, total_r = summary.mentions.sum(), assigned.feedback_id.nunique()
-        outliers = points[points.topic == -1]
+        outliers = points[is_outlier]
         median_reach = summary.reach.median()
         print(f"  {'-' * 70}")
         print(f"  รวม {total_m} จุด / {total_r} คน · ไม่เข้ากลุ่ม {len(outliers)} จุด · "
