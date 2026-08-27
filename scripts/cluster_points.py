@@ -133,9 +133,30 @@ def topic_diversity(topic_words: list[list[str]], top_k: int = 10) -> float:
 
 
 # ── clustering ─────────────────────────────────────────────────────────
+# สัดส่วนของ min_cluster_size ต่อจำนวนเอกสารทั้งหมด แทนเลขตายตัว เพราะ HDBSCAN
+# วัดจากความหนาแน่น ไม่ใช่จำนวนสัมบูรณ์ — corpus ใหญ่ขึ้น mcs ที่เหมาะสมต้องใหญ่ขึ้นตาม
+# สัดส่วนนี้ calibrate จาก sweep บน corpus ปัจจุบัน (145 จุด): ช่วงที่ topic แยก
+# กันชัดคือ mcs 4-5 (2.8-3.5% ของ N) ก่อนจะเริ่มยุบรวมเป็น mega-topic ตั้งแต่ mcs 6
+# ขึ้นไป (4.1%+) — ยังต้อง sweep+อ่านชื่อ topic ซ้ำทุกครั้งที่ N เปลี่ยนมาก ไม่ใช่
+# สูตรที่รับประกันผลได้ แต่เป็นจุดเริ่มที่สมเหตุสมผลกว่าการลอกเลข 2-10 ตายตัวมาใช้
+MCS_RATIOS = (0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.05, 0.07)
+
+
 def build_configs(n_docs: int) -> list[int]:
-    """ค่า min_cluster_size ที่จะลอง — ต้องน้อยกว่าครึ่งของจำนวนเอกสาร"""
-    return [m for m in (2, 3, 4, 5, 6, 7, 8, 10) if m < n_docs // 2]
+    """ค่า min_cluster_size ที่จะลอง คิดเป็นสัดส่วนของจำนวนเอกสาร ไม่ใช่เลขตายตัว
+
+    ทำแบบนี้เพื่อให้ sweep ค่าเริ่มต้นใช้ได้กับ corpus ทุกขนาด ไม่ใช่แค่ 145 จุด
+    ที่ calibrate ไว้ตอนแรก — ถ้า corpus โตขึ้นเป็น 370+ ตามที่ประมาณไว้ตอน pilot
+    เลข 2-10 แบบเดิมจะเล็กเกินไปมาก ทำให้ topic แตกละเอียดเกินความจำเป็นทั้งชุด
+    """
+    seen: set[int] = set()
+    out: list[int] = []
+    for pct in MCS_RATIOS:
+        m = max(2, round(n_docs * pct))
+        if m not in seen and m < n_docs // 2:
+            seen.add(m)
+            out.append(m)
+    return out
 
 
 def _topic_representation():
@@ -295,7 +316,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mcs", type=int, nargs="+", default=None, metavar="N",
                     help="ค่า min_cluster_size ที่จะลอง เช่น --mcs 5 หรือ --mcs 3 5 8 "
-                         "(ไม่ใส่ = ลองทุกค่า)")
+                         "(ไม่ใส่ = ลองทุกค่า, เป็นสัดส่วนของจำนวนเอกสารอัตโนมัติ)")
+    ap.add_argument("--mcs-pct", type=float, default=None, metavar="X",
+                    help="กำหนด mcs เป็น X%% ของจำนวนเอกสารแทนเลขตายตัว เช่น "
+                         "--mcs-pct 3.5 ที่ N=145 จุด จะได้ mcs=5 โดยอัตโนมัติ "
+                         "— ใช้แทน --mcs เวลาย้ายไปรัน corpus ขนาดอื่น (ไม่มีผลถ้าใส่ --mcs ด้วย)")
     ap.add_argument("--examples", type=int, default=None, metavar="N",
                     help="จำกัดจำนวนข้อความที่แสดงต่อ topic (ไม่ใส่ = แสดงทุกข้อความ)")
     ap.add_argument("--truncate", type=int, default=None, metavar="N",
@@ -309,6 +334,9 @@ def main() -> None:
     ap.add_argument("--split-large", type=int, default=None, metavar="N",
                     help="จับกลุ่มซ้ำเฉพาะกลุ่มที่มีสมาชิก >= N เพื่อดึงรายละเอียดย่อยออกมา "
                          "เช่น --split-large 15")
+    ap.add_argument("--split-large-pct", type=float, default=None, metavar="X",
+                    help="กำหนด --split-large เป็น X%% ของจำนวนเอกสารแทนเลขตายตัว "
+                         "(ไม่มีผลถ้าใส่ --split-large ด้วย)")
     ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2",
                     help="โมเดล sentence-transformers ที่ใช้ทำ embedding")
     args = ap.parse_args()
@@ -321,6 +349,19 @@ def main() -> None:
     ]
     points = pd.DataFrame(rows)
     docs = points.text.tolist()
+    n_docs = len(points)
+
+    # เอา --mcs/--split-large ที่พิมพ์ตรง ๆ เป็นหลักเสมอ ถ้าไม่ใส่มาค่อยคำนวณจาก %
+    # ของจำนวนเอกสารจริง จะได้ค่าที่ใช้แล้วไปด้วยกันได้เมื่อ N เปลี่ยน ไม่ต้องมานั่ง
+    # เดาเลขใหม่ทุกครั้งที่ corpus โต — เก็บ flag ไว้ด้วยว่า resolve จาก % จริงไหม
+    # เพราะถ้าใส่ทั้งคู่ --mcs ต้องชนะ แต่ห้ามพิมพ์แจ้งว่ามาจาก % ทั้งที่จริงไม่ใช่
+    args.mcs_from_pct = args.mcs_pct is not None and not args.mcs
+    if args.mcs_from_pct:
+        args.mcs = [max(2, round(n_docs * args.mcs_pct / 100))]
+
+    args.split_large_from_pct = args.split_large_pct is not None and args.split_large is None
+    if args.split_large_from_pct:
+        args.split_large = max(3, round(n_docs * args.split_large_pct / 100))
 
     REPORTS.mkdir(parents=True, exist_ok=True)
     report_path = REPORTS / report_filename(args, len(points))
@@ -339,7 +380,12 @@ def main() -> None:
 def _run(args, points, docs) -> None:
 
     print(f"atomic points {len(points)} จุด จาก {points.feedback_id.nunique()} responses")
-    print(f"ความยาวเฉลี่ย {points.text.str.split().str.len().mean():.0f} คำ\n")
+    print(f"ความยาวเฉลี่ย {points.text.str.split().str.len().mean():.0f} คำ")
+    if args.mcs_from_pct:
+        print(f"mcs = {args.mcs[0]}  ({args.mcs_pct}% ของ {len(points)} จุด)")
+    if args.split_large_from_pct:
+        print(f"split-large = {args.split_large}  ({args.split_large_pct}% ของ {len(points)} จุด)")
+    print()
 
     # 2. embedding
     from sentence_transformers import SentenceTransformer
