@@ -182,6 +182,8 @@ def main() -> None:
                          "(ไม่ใส่ = ลองทุกค่า)")
     ap.add_argument("--examples", type=int, default=0, metavar="N",
                     help="แสดงข้อความจริงในแต่ละ topic กี่ข้อความ (ใส่ 99 = แสดงหมด)")
+    ap.add_argument("--full-text", action="store_true",
+                    help="แสดงข้อความตัวอย่างเต็ม ไม่ตัดที่ 88 ตัวอักษร")
     ap.add_argument("--reduce-outliers", action="store_true",
                     help="ย้ายจุดที่ HDBSCAN ทิ้งไปยัง topic ที่ใกล้ที่สุด แทนที่จะปล่อยทิ้ง")
     ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2",
@@ -276,7 +278,7 @@ def main() -> None:
             flag = f"  เฟ้อ {inflation:.2f}x" if inflation > 1.01 else ""
             print(f"  {stat.mentions:>3} จุด /{stat.reach:>3} คน{flag:>12}  {', '.join(words)}")
             for text in assigned[assigned.topic == topic_id].text.head(args.examples):
-                print(f"        - {text[:88]}")
+                print(f"        - {text if args.full_text else text[:88]}")
 
         total_m, total_r = summary.mentions.sum(), assigned.feedback_id.nunique()
         n_out = (points.topic == -1).sum()
