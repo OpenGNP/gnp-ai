@@ -177,10 +177,15 @@ def evaluate(model, labels, docs) -> dict:
 # ── main ───────────────────────────────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--examples", type=int, default=0, help="จำนวนตัวอย่างข้อความต่อ topic")
-    ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2")
+    ap.add_argument("--mcs", type=int, nargs="+", default=None, metavar="N",
+                    help="ค่า min_cluster_size ที่จะลอง เช่น --mcs 5 หรือ --mcs 3 5 8 "
+                         "(ไม่ใส่ = ลองทุกค่า)")
+    ap.add_argument("--examples", type=int, default=0, metavar="N",
+                    help="แสดงข้อความจริงในแต่ละ topic กี่ข้อความ (ใส่ 99 = แสดงหมด)")
     ap.add_argument("--reduce-outliers", action="store_true",
-                    help="ย้ายจุดที่ถูกทิ้งไปยัง topic ที่ใกล้ที่สุด")
+                    help="ย้ายจุดที่ HDBSCAN ทิ้งไปยัง topic ที่ใกล้ที่สุด แทนที่จะปล่อยทิ้ง")
+    ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2",
+                    help="โมเดล sentence-transformers ที่ใช้ทำ embedding")
     args = ap.parse_args()
 
     # 1. แตกเฉลยออกเป็น atomic points รายจุด
@@ -206,8 +211,17 @@ def main() -> None:
     ).astype(np.float32)
 
     # 3. จับกลุ่มด้วย min_cluster_size หลายค่า
-    configs = build_configs(len(docs))
-    print(f"ทดลอง min_cluster_size {configs}\n")
+    configs = args.mcs if args.mcs else build_configs(len(docs))
+    too_big = [m for m in configs if m >= len(docs) // 2]
+    if too_big:
+        print(f"ข้าม mcs {too_big} เพราะมากกว่าครึ่งของจำนวนเอกสาร ({len(docs)} จุด)")
+        configs = [m for m in configs if m not in too_big]
+    if not configs:
+        print("ไม่เหลือค่าให้ลอง")
+        return
+
+    mode = "ย้าย outlier เข้ากลุ่มใกล้สุด" if args.reduce_outliers else "ปล่อย outlier ทิ้ง"
+    print(f"ทดลอง min_cluster_size {configs}  ·  {mode}\n")
 
     results = []
     for mcs in configs:
