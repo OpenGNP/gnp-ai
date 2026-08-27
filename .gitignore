@@ -21,3 +21,4 @@ data/
 # ผลการทดลอง
 data/cluster_results.csv
 data/finetune_results_fold*.csv
+data/cluster_report.txt

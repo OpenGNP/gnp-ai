@@ -1,4 +1,4 @@
-"""จับกลุ่ม atomic points เป็น topic ด้วย sentence transformer
+"""จับกลุ่ม atomic points เป็น topic ด้วย sentence transformer + HDBSCAN
 
 ใช้ atomic points จากเฉลย ไม่ใช่ output จากโมเดล เพื่อแยกความเสี่ยงสองอย่าง
 ออกจากกัน ถ้าใช้ output ของโมเดลที่ยังรวบจุดอยู่ แล้ว clustering ออกมาไม่ดี
@@ -7,7 +7,7 @@
 
 ใช้:
     python scripts/cluster_points.py
-    python scripts/cluster_points.py --top-n 2
+    python scripts/cluster_points.py --examples 2
 """
 
 from __future__ import annotations
@@ -88,22 +88,15 @@ def topic_diversity(topic_words: list[list[str]], top_k: int = 10) -> float:
 
 
 # ── clustering ─────────────────────────────────────────────────────────
-def build_configs(n_docs: int) -> list[dict]:
-    configs = []
-    for min_cluster_size in (2, 3, 4, 5, 8, 10):
-        if min_cluster_size < n_docs // 2:
-            configs.append({"algo": "hdbscan", "min_cluster_size": min_cluster_size})
-    for k in (5, 8, 10, 12, 15, 20):
-        if k < n_docs // 2:
-            configs.append({"algo": "kmeans", "n_clusters": k})
-    return configs
+def build_configs(n_docs: int) -> list[int]:
+    """ค่า min_cluster_size ที่จะลอง — ต้องน้อยกว่าครึ่งของจำนวนเอกสาร"""
+    return [m for m in (2, 3, 4, 5, 6, 7, 8, 10) if m < n_docs // 2]
 
 
-def fit(cfg: dict, docs: list[str], embeddings: np.ndarray):
+def fit(min_cluster_size: int, docs: list[str], embeddings: np.ndarray):
     from bertopic import BERTopic
     from bertopic.vectorizers import ClassTfidfTransformer
     from hdbscan import HDBSCAN
-    from sklearn.cluster import KMeans
     from sklearn.feature_extraction.text import CountVectorizer
     from umap import UMAP
 
@@ -112,15 +105,11 @@ def fit(cfg: dict, docs: list[str], embeddings: np.ndarray):
     # จะ error แทนที่จะทำงานแย่ลงเฉย ๆ
     n_neighbors = max(2, min(15, n_docs - 1))
 
-    cluster_model = (
-        HDBSCAN(
-            min_cluster_size=cfg["min_cluster_size"],
-            metric="euclidean",
-            cluster_selection_method="eom",
-            prediction_data=True,
-        )
-        if cfg["algo"] == "hdbscan"
-        else KMeans(n_clusters=cfg["n_clusters"], random_state=SEED, n_init=10)
+    cluster_model = HDBSCAN(
+        min_cluster_size=min_cluster_size,
+        metric="euclidean",
+        cluster_selection_method="eom",
+        prediction_data=True,
     )
 
     model = BERTopic(
@@ -154,7 +143,7 @@ def evaluate(model, labels, docs) -> dict:
 # ── main ───────────────────────────────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--top-n", type=int, default=1, help="จำนวน config ที่จะแสดงรายละเอียด")
+    ap.add_argument("--examples", type=int, default=0, help="จำนวนตัวอย่างข้อความต่อ topic")
     ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2")
     args = ap.parse_args()
 
@@ -180,96 +169,72 @@ def main() -> None:
         docs, convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False
     ).astype(np.float32)
 
-    # 3. จับกลุ่มหลาย config
+    # 3. จับกลุ่มด้วย min_cluster_size หลายค่า
     configs = build_configs(len(docs))
-    print(f"ทดลอง {len(configs)} configuration\n")
+    print(f"ทดลอง min_cluster_size {configs}\n")
 
     results = []
-    for i, cfg in enumerate(configs, 1):
-        name = (
-            f"hdbscan/mcs{cfg['min_cluster_size']}"
-            if cfg["algo"] == "hdbscan"
-            else f"kmeans/k{cfg['n_clusters']}"
-        )
+    for mcs in configs:
         try:
-            model, labels = fit(cfg, docs, embeddings)
-            row = {"config": name, **cfg, **evaluate(model, labels, docs),
-                   "_model": model, "_labels": labels}
-            print(f"  [{i}/{len(configs)}] {name:18s} topics={row['n_topics']:3d}  "
-                  f"outlier={row['outlier_rate']:5.1%}  npmi={row['npmi']:+.3f}  "
-                  f"diversity={row['diversity']:.2f}")
+            model, labels = fit(mcs, docs, embeddings)
+            results.append({"mcs": mcs, **evaluate(model, labels, docs),
+                            "_model": model, "_labels": labels})
         except Exception as exc:
-            row = {"config": name, **cfg, "error": f"{type(exc).__name__}: {exc}"}
-            print(f"  [{i}/{len(configs)}] {name:18s} ล้มเหลว {row['error'][:50]}")
-        results.append(row)
+            results.append({"mcs": mcs, "error": f"{type(exc).__name__}: {exc}"})
 
     table = pd.DataFrame([{k: v for k, v in r.items() if not k.startswith("_")} for r in results])
     out_csv = DATA / "cluster_results.csv"
     table.to_csv(out_csv, index=False)
 
-    ok = table[table.get("error").isna()] if "error" in table else table
-    if ok.empty:
-        print("\nทุก configuration ล้มเหลว")
-        return
-
-    print("\n" + "=" * 74)
-    print("HDBSCAN เทียบ KMeans")
     print("=" * 74)
-    for algo in ("hdbscan", "kmeans"):
-        sub = ok[ok.algo == algo]
-        if not sub.empty:
-            print(f"  {algo:8s} outlier ต่ำสุด {sub.outlier_rate.min():5.1%} "
-                  f"กลาง {sub.outlier_rate.median():5.1%}  ·  npmi สูงสุด {sub.npmi.max():+.3f}")
+    print("สรุปภาพรวม")
+    print("=" * 74)
+    print(f"{'mcs':>4}  {'topics':>6}  {'outlier':>8}  {'ไม่เข้ากลุ่ม':>10}  {'npmi':>7}  {'diversity':>9}")
+    for r in results:
+        if "error" in r:
+            print(f"{r['mcs']:>4}  ล้มเหลว {r['error'][:45]}")
+            continue
+        n_out = sum(1 for t in r["_labels"] if t == -1)
+        print(f"{r['mcs']:>4}  {r['n_topics']:>6}  {r['outlier_rate']:>7.1%}  "
+              f"{n_out:>8} จุด  {r['npmi']:>+7.3f}  {r['diversity']:>9.2f}")
 
-    # ใช้ได้จริงต้องทั้งเก็บเอกสารไว้ได้และ topic มีความหมาย
-    usable = ok[(ok.outlier_rate <= 0.30) & (ok.n_topics >= 3)]
-    if usable.empty:
-        print("\nไม่มี configuration ไหนที่เก็บเอกสารไว้ได้เกิน 70% พร้อมกับมี topic อย่างน้อย 3 กลุ่ม")
-        print("แปลว่า HDBSCAN ไม่เหมาะกับ corpus ขนาดนี้ ควรใช้ KMeans")
-        usable = ok[ok.n_topics >= 3]
-        if usable.empty:
-            return
-
-    best = usable.sort_values("npmi", ascending=False).head(args.top_n)
-    by_name = {r["config"]: r for r in results if "_model" in r}
-
-    for cfg_name in best.config:
-        row = by_name[cfg_name]
-        model, labels = row["_model"], row["_labels"]
+    # 4. รายละเอียดของทุกค่า
+    for r in results:
+        if "error" in r:
+            continue
+        model, labels = r["_model"], r["_labels"]
         points["topic"] = labels
-
-        print("\n" + "=" * 74)
-        print(f"รายละเอียดของ {cfg_name}")
-        print(f"  topic {row['n_topics']} กลุ่ม · outlier {row['outlier_rate']:.1%} · "
-              f"npmi {row['npmi']:+.3f} · diversity {row['diversity']:.2f}")
-        print("=" * 74)
-
         assigned = points[points.topic != -1]
+
         summary = (
             assigned.groupby("topic")
             .agg(mentions=("text", "size"), reach=("feedback_id", "nunique"))
             .sort_values("reach", ascending=False)
         )
 
+        print("\n" + "=" * 74)
+        print(f"min_cluster_size = {r['mcs']}   ({r['n_topics']} topics · "
+              f"outlier {r['outlier_rate']:.1%} · npmi {r['npmi']:+.3f})")
+        print("=" * 74)
+
         for topic_id, stat in summary.iterrows():
             words = [w for w, _ in model.get_topic(topic_id)][:5]
             inflation = stat.mentions / stat.reach
-            print(f"\n  [{', '.join(words)}]")
-            print(f"     mentions {stat.mentions:2d} จุด · reach {stat.reach:2d} คน"
-                  + (f"  (เฟ้อ {inflation:.2f}x)" if inflation > 1.01 else ""))
-            for text in assigned[assigned.topic == topic_id].text.head(2):
-                print(f"     - {text[:95]}")
-
-        if row["outlier_rate"] > 0:
-            n_out = (points.topic == -1).sum()
-            print(f"\n  ไม่เข้ากลุ่มไหนเลย {n_out} จุด")
+            flag = f"  เฟ้อ {inflation:.2f}x" if inflation > 1.01 else ""
+            print(f"  {stat.mentions:>3} จุด /{stat.reach:>3} คน{flag:>12}  {', '.join(words)}")
+            for text in assigned[assigned.topic == topic_id].text.head(args.examples):
+                print(f"        - {text[:88]}")
 
         total_m, total_r = summary.mentions.sum(), assigned.feedback_id.nunique()
-        print(f"\n  รวม mentions {total_m} จุด แต่ reach {total_r} คน")
-        print("  ตัวเลขสองอันนี้ต่างกันเพราะคนเดียวเขียนได้หลายจุด")
-        print("  priority ต้องนับ reach ไม่ใช่ mentions ไม่งั้นคนเขียนยาวคนเดียวจะมีน้ำหนักเกินจริง")
+        n_out = (points.topic == -1).sum()
+        median_reach = summary.reach.median()
+        print(f"  {'-' * 70}")
+        print(f"  รวม {total_m} จุด / {total_r} คน · ไม่เข้ากลุ่ม {n_out} จุด · "
+              f"reach กลางของกลุ่ม {median_reach:.0f} คน")
 
     print(f"\nบันทึกตารางที่ {out_csv}")
+    print("\nวิธีเลือก: npmi สูงอย่างเดียวไม่พอ เพราะกลุ่มยิ่งเล็กยิ่งได้ npmi สูงโดยธรรมชาติ")
+    print("ให้ดูด้วยว่าชื่อกลุ่มอ่านแล้วแยกออกจากกันจริงไหม และ reach ต่อกลุ่มมากพอจะตัดสินใจได้ไหม")
 
 
 if __name__ == "__main__":
