@@ -17,3 +17,7 @@ data/
 
 # macOS
 .DS_Store
+
+# ผลการทดลอง
+data/cluster_results.csv
+data/finetune_results_fold*.csv
