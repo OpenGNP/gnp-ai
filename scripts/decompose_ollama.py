@@ -249,6 +249,23 @@ def _run(client: httpx.Client, df: pd.DataFrame, variants: list[str]) -> None:
     out_csv = DATA / "decompose_ollama_results.csv"
     results.to_csv(out_csv, index=False)
 
+    # แยกไฟล์ผลจริงต่อ variant ให้เป็น input ของ pipeline ขั้นถัดไปได้เลย (schema
+    # เดียวกับ dataset.csv: feedback_id + points_json) โดยไม่ต้องพึ่งเฉลย —
+    # นี่คือ atomic points ที่ Mistral ตัดสินใจเองจริง ๆ ไม่ใช่ของที่คนแก้ไว้แล้ว
+    raw_lookup = df.set_index("feedback_id").raw_text
+    for variant in results.variant.unique():
+        sub = results[results.variant == variant]
+        points_out = pd.DataFrame({
+            "feedback_id": sub.feedback_id.values,
+            "raw_text": raw_lookup.loc[sub.feedback_id].values,
+            "points_json": sub.pred.values,
+            "n_points": sub.pred_n.values,
+            "status": sub.status.values,
+        })
+        points_path = DATA / f"decomposed_{variant}.csv"
+        points_out.to_csv(points_path, index=False)
+        print(f"บันทึก atomic points จริงของ prompt {variant} ที่ {points_path}")
+
     print(f"\n{'='*74}\nสรุปผล\n{'='*74}")
     summary = results.groupby("variant").agg(
         n=("feedback_id", "count"), pred_points=("pred_n", "mean"),

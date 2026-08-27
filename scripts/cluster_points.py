@@ -339,9 +339,15 @@ def main() -> None:
                          "(ไม่มีผลถ้าใส่ --split-large ด้วย)")
     ap.add_argument("--embedding-model", default="all-MiniLM-L6-v2",
                     help="โมเดล sentence-transformers ที่ใช้ทำ embedding")
+    ap.add_argument("--points-file", default=None, metavar="PATH",
+                    help="ไฟล์ atomic points ที่จะจับกลุ่ม ต้องมีคอลัมน์ feedback_id, "
+                         "points_json (ไม่ใส่ = ใช้เฉลยจาก data/dataset.csv ตามเดิม) "
+                         "เช่น data/decomposed_v1.csv จาก decompose_ollama.py "
+                         "— ผล decompose จริงของ Mistral ไม่ใช่เฉลยที่คนแก้")
     args = ap.parse_args()
 
-    df = pd.read_csv(DATA / "dataset.csv")
+    points_source = Path(args.points_file) if args.points_file else DATA / "dataset.csv"
+    df = pd.read_csv(points_source)
     rows = [
         {"feedback_id": r.feedback_id, "text": p}
         for r in df.itertuples()
