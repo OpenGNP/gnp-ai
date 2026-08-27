@@ -17,8 +17,10 @@ import json
 import math
 import os
 import re
+import sys
 import warnings
 from collections import Counter
+from datetime import datetime
 from itertools import combinations
 from pathlib import Path
 
@@ -34,7 +36,47 @@ warnings.filterwarnings("ignore")
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
+REPORTS = DATA / "reports"
 SEED = 42
+
+
+class Tee:
+    """เขียนออกทั้งหน้าจอและไฟล์พร้อมกัน ใช้แทน stdout ตลอดการรัน
+
+    ทำแบบนี้แทนการรัน `python ... > out.txt` เอง เพื่อให้ได้ผลทั้งสองทาง
+    ในคำสั่งเดียว ไม่ต้องจำ redirect ทุกครั้ง
+    """
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, text: str) -> None:
+        for s in self.streams:
+            s.write(text)
+
+    def flush(self) -> None:
+        for s in self.streams:
+            s.flush()
+
+    def isatty(self) -> bool:
+        # library ที่เช็ค isatty() ก่อน print สี/progress bar (เช่น transformers)
+        # ต้องได้คำตอบจาก terminal จริง ไม่ใช่จากไฟล์ที่แนบมาด้วย
+        return self.streams[0].isatty()
+
+
+def report_filename(args, n_docs: int) -> str:
+    embed = args.embedding_model.split("/")[-1]
+    mcs_part = "-".join(map(str, args.mcs)) if args.mcs else "sweep"
+
+    flags = []
+    if args.reduce_outliers:
+        flags.append(f"reduce{args.outlier_threshold}")
+    if args.split_large:
+        flags.append(f"split{args.split_large}")
+    flag_part = "_" + "_".join(flags) if flags else ""
+
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"cluster_{embed}_n{n_docs}_mcs{mcs_part}{flag_part}_{stamp}.txt"
 
 
 # ── metrics ────────────────────────────────────────────────────────────
@@ -268,7 +310,6 @@ def main() -> None:
                     help="โมเดล sentence-transformers ที่ใช้ทำ embedding")
     args = ap.parse_args()
 
-    # 1. แตกเฉลยออกเป็น atomic points รายจุด
     df = pd.read_csv(DATA / "dataset.csv")
     rows = [
         {"feedback_id": r.feedback_id, "text": p}
@@ -277,6 +318,22 @@ def main() -> None:
     ]
     points = pd.DataFrame(rows)
     docs = points.text.tolist()
+
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    report_path = REPORTS / report_filename(args, len(points))
+    real_stdout = sys.stdout
+
+    with open(report_path, "w") as fh:
+        sys.stdout = Tee(real_stdout, fh)
+        try:
+            _run(args, points, docs)
+        finally:
+            sys.stdout = real_stdout
+
+    print(f"บันทึกรายงานฉบับเต็มที่ {report_path}")
+
+
+def _run(args, points, docs) -> None:
 
     print(f"atomic points {len(points)} จุด จาก {points.feedback_id.nunique()} responses")
     print(f"ความยาวเฉลี่ย {points.text.str.split().str.len().mean():.0f} คำ\n")
@@ -393,6 +450,7 @@ def main() -> None:
     print(f"\nบันทึกตารางที่ {out_csv}")
     print("\nวิธีเลือก: npmi สูงอย่างเดียวไม่พอ เพราะกลุ่มยิ่งเล็กยิ่งได้ npmi สูงโดยธรรมชาติ")
     print("ให้ดูด้วยว่าชื่อกลุ่มอ่านแล้วแยกออกจากกันจริงไหม และ reach ต่อกลุ่มมากพอจะตัดสินใจได้ไหม")
+
 
 
 if __name__ == "__main__":
