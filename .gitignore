@@ -9,7 +9,7 @@ venv/
 # FastAPI
 .pytest_cache/
 # Student feedback data — must never be committed
-data/
+data/reports
 
 # Secrets
 .env

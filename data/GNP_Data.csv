@@ -1,0 +1,143 @@
+feedback_id,raw_text,has_multiple_points
+1,The knowledge does cover overall things but the teaching was a bit fast,No
+2,I found that our curriculum has been made according to universal standards,No
+3,"I think that all of the CSC courses are useful to establish the base for those whom are unfamiliar with the java program. However, I’m unsure of the purpose for some GEN courses.",No
+4,I would say I learn a lot and I learn kinda fast compared to before that I learn by my self but cs102 a bit unpredictable like I not sure what it gonna be on exam like If you just do diy you can’t do quiz hard questions for sure like there is noway the guy that can do it is guy that 100+ leetcode and can do hard leetcode questions but main point is it is hard not becuase it really hard but it because it not gradually increases harder and I would say I got better than other because I got good mentor like P.philix is good at teaching compare to other room but that also make it not stable but I not sure how to make it better I feel like Ai can already teach you all If you don’t know and a lot of tool but I feel like it can be better than this like cal1 and intergral 1 I feel like I listen then practice then I can actually do it but programming it just a but confuse especially it start with java .it kinda complicated to start (If you really don’t know anything ) compare to python but yeah I kinda get professors that java is get more salary than python.,Yes
+5,"I'm not sure since we're kind of new here, but in this second semester we feel kind of overwhelmed because we have a lot of additional class (lab) while our class (mandatory one) scehdule is already full and packed so we kind of don't have time to explore things by oruselves.",No
+6,"About curriculum, Its because we are learning everything but not focusing on one thing.",No
+7,csc122 should be taught more than let student do,No
+8,"Till now, I find the course really difficult. The increased grade range for this second semester does not help at all. We were informed that first sem there was too much people getting high grades, that's the reason why they increased it. However, this would reflect very negatively on people that had a low grade.",No
+9,some classes need more hands on labs like networking which SIT already have network room in lx building.,No
+10,I would love for more practical lesson + real life stuff,No
+11,"Surely the job landscape has changed and been changing rapidly as AI growth and market is saturated right now. I don't know how curriculum needs to be changed but definitely, we need to do something about it and it's the truth. Let's talk about fundamental courses first, definitely courses like CSC102, 122 are mandatory for CS student to dive into the field so, all these fundamental courses are important meaning no change needed. But when it comes to infrastructure sides, we don't know much about it. Something like Dockers and Kubernetes. These are just an example. But at the end of the day, we should learn on our own since we are CS students and part of the process. I don't have the ultimate solution for this, but something needs to be done.",Yes
+12,Big Data Analytic Course need to include hands-on experience to students,No
+13,"As a 4th-year student from the old curriculum, in my perspective I’m judging based on (quality / attending one class session) and only on the knowledge gained in class, not outside the classroom. My opinions are as follows:
+
+1. Some courses do not meet the needs of real-world work because they are outdated, such as CSC325, CSC340, and CSC319. In my view, these courses should teach more than just GUI development and restructuring. I think the content is quite old. To make Java more practically useful, it should involve building a full Desktop Application or doing a Big Data project instead.
+
+2. Courses that should be hands-on ended up being mostly theoretical. For example, CSC220 was very disappointing for me in terms of learning networking. I believe this subject has huge potential for further development, but it felt like there was a lot of talk and not much substance. We pay almost 50,000 baht to sit in an old CB building without doing any concrete lab work, unlike other faculties that pay less but have proper networking workshops. Meanwhile, we just sit there, looking at each other, after paying tens of thousands more but receiving lower quality than other departments.
+
+CSC325 was also disappointing. I believe this course still has potential and could offer much more. There was no project at all. Most of the time was spent grinding through SeedLab, documenting it, and then taking the final exam. In the end, there was no real continuation or application. I see this course as almost useful — it was just missing a focus on quality, as it emphasized quantity of work instead.
+
+3. There was a gap in coding practice. During Years 1–2, it was the most stressful period, but also the most beneficial for me. However, in Years 3–4, I felt like coding almost completely disappeared. It became very theory-heavy, with not much hands-on practice. I understand that this might be due to the reasons mentioned in points 1 and 2. I also feel that this may have already been improved in the new curriculum. Overall, though, I found the learning experience enjoyable during my time here.",Yes
+14,"Language and General Education Courses (LNG and GEN): These courses are not useful and waste a lot of time. Students with very high IELTS scores still have to take basic language classes, which doesn't make sense. Additionally, the grading standards are unclear and difficult to verify.
+Programming Courses: The instructors are skilled and knowledgeable, which is good. However, the courses focus too much on fundamentals and theory. The practical application is very limited. Students have to learn and adapt a lot on their own to be ready for internships.
+Need for More Specialized Elective Courses: The curriculum should offer more specialized track options. For example, UX/UI in course 105 could be a full elective course, but currently it only covers basic concepts that cannot be applied in real work. We would like to see courses such as Game Development with Unity, Advanced Power BI for Data Science
+Other industry-relevant specialized topics
+Courses 100/101 (Coursera ), 301, and 302: These courses waste time and do not measure any real CS skills or abilities. I don't understand the purpose of having them except to take time away from more necessary work.",Yes
+15,"Most of the courses were quite helpful. To name a few:
+CSC209 Data Structures: While the sessions occasionally ran longer than scheduled, the content and the instructor were excellent. The instructor explained concepts clearly with ample examples. Although class times were sometimes flexible due to his responsibilities as the Department Dean, the material remained highly practical and valuable.
+CSC105 Web Application Development: Some students felt this course only covered the basics, but I personally appreciated the approach. It encourages ""learning how to learn."" Instead of just following instructions, we were pushed to think for ourselves. This is essential for developing the skills needed to form original ideas and manage our own projects.
+Overall, I think a score of 4 is appropriate, as the quality of the class is great but there is still room for improvement.",Yes
+16,"I feel like the curriculum right now is too data sci oriented but not in a way that we can adapt it in real life.
+For example, the data sci course is too theory based. Not to mention that the content is overlaping with data visualization, big data, data mining. Why don't just combine some together so we can have more knowledge on one particular field within one semester and adapt it in our work field?",Yes
+17,All courses should adapt and focus more on projects. Also internship duration of 2 months during the summer seems abit too little and also the timing is abit off. Like having the entire last semester of 4th year to be an internship seems like a better way.,Yes
+18,"I got really high English test score. I really don’t understand why, us as an international program students, have to learn such a basic English concept of an elementary school grader level? Not only it’s not useful it’s also waste of my time and energy to attend all those courses In Jarah course, I don’t understand why LINE is consistently used as the main communication channel for assignments, class materials, and important course details. LINE has limited message history accessibility and is not a professional or reliable platform for managing academic information.
+Using LINE for quick reminders or minor announcements is acceptable. But relying on it for all course-related communication is excessive and problematic. The faculty already provides proper platforms such as Microsoft Teams and CSCMS, which are designed for structured communication, assignment posting, and long-term record keeping.
+Because information is frequently shared only through LINE chats, important details are often missed or lost, leading to confusion among students. Assignments communicated verbally in class, through chat messages, or by asking students to take notes are subjective and lack clarity. As a result, many students are uncertain about task requirements, deadlines, and expectations.
+Assignments and course materials should be consistently posted on Microsoft Teams or CSCMS in a clear, concrete, and centralized manner. This would significantly reduce misunderstandings and help students manage their work more effectively.",Yes
+19,"For me the curriculum is useful as fundamental knowledge , but as tech field is rapidly grow it's also make me feel like some course are outdated. Such as modern java. This also affect us when applying for internship. Even we the curriculum state that we are Data science path, but even I try to apply for data sci I dont feel like I have enough practical experience.",Yes
+20,It's good,No
+21,Good I think,No
+22,"Everything is find, all the class/lab is good but maybe if it possible SIT can open the study room until night, not just until 7 pm",No
+23,Its quite clean and has most of the things we need,No
+24,Need more tree,No
+25,It’s all ok but some of the chair are uncomfortable,No
+26,"CB2 classroom tables are small and cramped, making it hard to take notes and focus on lectures.",No
+27,Wifi at CB2306 can’t even use like unstable,No
+28,some class need to use laptop for learn programming but we have a class in cb2 building which the extension plug isnt enough for powered student's latop and devices,No
+29,writing table inside classroom are small except CB2312,No
+30,"The Engineering faculty has better and newer classrooms. Some departments even have dedicated rooms for LAN cable practice, while we don’t have anything like that",No
+31,"We would like to have classes in the LX building, which has much better equipment and facilities compared to the CB building. Additionally, the co-working space in the faculty needs improvement in terms of air circulation and odor control. The equipment should also be updated to be more modern.",Yes
+32,"I rated this a 4 because the venues aren't flexible enough. Most classes stay in the same room (e.g., CB2306) all semester, even when the lesson requires computer access. It would be better if we could move to the LX building when the course content specifically requires those facilities.",No
+33,I wish we get to use LX more. Especially those classes that req programming,No
+34,"Its generally okay, clean and well maintained.",No
+35,All programming courses should be held in LX not cb. Even if it’s only 1 class — it should be at LX. Period.,No
+36,"The new table at CB is very comftable, very appreiciate that faculty improve this.",No
+37,The SIT staffs are good but sometimes they respond a bit slow,No
+38,"We haven't commuicate a lot to SIT staff, so I don't have any feedback",No
+39,"Once again when contacting any staff faculty members of SIT, I will receive no responses on LINE and no further response or communication whatsoever on Teams making communication a very difficult issue especially regarding course information or emergency situations that require rapid communication.",Yes
+40,They always announce everything,
+41,"During my internship, I inquired many questions to P' Nick, but my messages are left on read. She could have referred me to someone else if she was busy.",No
+42,"I would like to express a big thanks to PNick while dealing with many stuff related to transfer credit, study plan, course selection, add and drop and other academic stuff.",No
+43,"P’Nick replies slowly. Sometimes a message is left unanswered for a whole day, and I have to follow up again.",No
+44,"I understand that P'Nick has a heavy workload, but leaving students' messages on read is not acceptable, especially for urgent matters. This happens regularly and has caused problems for students many times. We suggest creating a better communication system where students can submit requests and track their status more easily.
+P'Vichy told us that TETET was not required if we already submitted other English test scores. However, based on the SIT website, the policy has changed and TETET is now required for graduation. Many fourth-year students missed the exam because we believed our previous English scores were enough. P'DJ, as many students have shared the same concerns about his behavior
+- Unequal treatment, Female students and Thai students receive better treatment and more attention, which makes other students uncomfortable. most importantly, the clear pattern of flirting with his students is completely unacceptable and must be stopped immediately.
+- Students who are close to P'DJ get special treatment, such as being excused for late attendance or receiving other advantages.
+- P'DJ's position is unclear. Sometimes acting like a senior student, sometimes like a professor. This creates tension during activities. The commanding and controlling behavior feels more like a dictator than a teacher. P'Jo has a similar position but never creates these problems or makes students feel uncomfortable. suggesting that P'DJ should receive training on professional conduct and learn to treat all students fairly and respectfully. The current situation affects the learning environment negatively.",Yes
+45,"SIT staffs are very helpful, and cooperative.",No
+46,SIT staff do their best to help everyone out but language barrier and only P’nicky and P’vichy being the main contact person for everything and everyone is a huge bottle neck for any process,No
+47,"I don’t think line is the best communication way. But I tried reaching them out via email, no response:)",No
+48,"The faculty should increase the number of support staff similar to P’Nicky and P’Vicky. With only two staff members handling a large student population, the workload is excessively heavy. This often leads to delays and workflow bottlenecks, which affect not only students but also other stakeholders involved in academic and administrative processes.",No
+49,"The process is all in the Line, which it shouldn't be, sometime I got left on read.",No
+50,It alright,No
+51,"The activities are fun and pretty helpful, but like I said before maybe SIT can consider to open more for international student (like make more activities that international student/english friendly, open SAMOSIT for international student too) so that we have equal opportunity as Thai student",Yes
+52,Lab1 in SIT building need to change the table,No
+53,It is good,No
+54,"Everything is fine except the wifi, I don't know why the wifi signal lately has been reallly bad that we have to use our own internet and considering that we're technology student, we need faster internet to do everything",No
+55,Wifi doesn't work properly sometimes,No
+56,Cannot use the wifi while in classes in cb1,No
+57,"Please add monitors to Common Rooms, and add better WiFi connectivity to CB2 classroom as it either keeps disconnecting or wouldn’t appear in the WiFi list, especially SIT-Secure.",Yes
+58,"Please make wifi great again especially in CB2 3rd floor building, kinda embarrassing that, of all Majors, Computer Science major doesn't have a reliable internet.",No
+59,CB2 have a bad spot of WiFi,No
+60,"For CB building Imma give it 4/10 because before they change the facilities in CB building everything is anything but comfortable, but now I think its slightly better 7/10. As for LX I would give it 8.5/10 sometimes 9/10 just the AC problem sometimes.
+Suggestion please change all the chair/desk/table if it's still those old horrible one which sometimes can't even hold tablet or laptop properly (You know the old table + chair one that can flip, some of those are even older than me). If possible add more electrical plug in CB building too. For LX, it would be great if the AC are more adjustable, you know, sometimes its too hot sometimes too cold.",Yes
+61,"It's excellent so far I guess, but sometimes we still compete for monitors.",No
+62,Sometime the Training room near the Lift had some smell coming from the AC.,No
+63,"The internet in CB building is extremely slow. I'm not sure if the signal is being blocked. Requesting a VM takes a very long time, staff pass responsibilities to each other, and the process has too many steps with many limitations.",Yes
+64,"Previously, the number of printers available was insufficient, with only two printers serving a large number of students. This often caused delays, long queues, and inconvenience, especially during peak periods such as assignment deadlines. However, the current situation has improved, and the number or accessibility of printers is now adequate to meet students’ needs. Overall, this issue has been resolved and is no longer a major concern.",No
+65,I really hope we can get the extension socket at every table,No
+66,the labs are okay but the internet and cscms frequently goes down so thats frustrating sometimes especially during exam or quizzes,No
+67,appreciate that we have more printer.,No
+68,I feel like it have too much app like I have ADHD it have cscms and team and leb2 it kinda hard to get track of assignments,No
+69,Would like to see new monitors,No
+70,The AC is sometimes too loud.,No
+71,"I’d love to experience more campus events from SIT, especially a formal prom with gowns and suits.",No
+72,From my 1st year experience I felt like some subject have quite a bit less of class activity especially it the first semester because it's first year I would like to get to know friends more.,No
+73,"I would like the tuition fees to be more transparent — what exactly they are being used for. I want to know what developments have been made so far, since most of the time we just study in the CB building (:D).",No
+74,"Scholarship Limitations:
+Scholarships have too many restrictions for Thai students, and the Academic Award amount decreases every year. This is very disappointing, as many students rely on this financial support.
+International Student Support:
+Moving to a foreign country is already difficult. I hope the faculty can make us feel warm and safe by building a stronger community for international students.
+Internship Support:
+The faculty needs to provide much more support for internships. Jobs for international students are very rare and often pay less than positions for Thai students. I would like to see partnerships similar to those in the Engineering faculty to make finding internships easier.",Yes
+75,"The current internship period of two months is considered insufficient for students to gain meaningful, hands-on experience. Within this limited timeframe, students often spend a large portion of the internship on onboarding, training, and adjustment, leaving little time to develop real professional skills or make substantial contributions. Extending the internship to four months or an entire semester—as practiced in other curricula—would allow students to gain deeper industry exposure, stronger practical skills, and better preparation for future employment.",No
+76,"LNG class, AJ.Jarah making Line as a learning platform, I want it to be on Microsoft team as it's more professional. Also when she give us assignment it's not very clear as she always use line and has no recording",Yes
+77,"Me personally don't have any issue, but my friends often have some issue regarding the slow process about documents",No
+78,"The process is not standardized, slow response",No
+79,The process this year is good and fast unlike previous years.,No
+80,Sometime the process of approving document takes time.,No
+81,"Immigration processes take a long time and have caused us to miss classes repeatedly. Is it possible to arrange group visa processing through the university or SIT directly? According to the regulations, we understand this is our responsibility, but additional support from the institution would be very helpful and reduce the impact on our studies.",No
+82,The new Visa system that IA KMUTT recently adopted was such a big help.,No
+83,We mostly have to go through IA and contact with them. I’ve never really talked to SIT about visa related stuff,No
+84,"The process is slow but it’s not KMUTT fault I truly understand. But it really does make, at some point, the uni experience bad because of it",No
+85,It's enough but could be better if all the staff could speak english so there's no misscommunication,No
+86,More english speaking staff,No
+87,More English spoken staff,No
+88,"When contacting any staff faculty members of SIT, I will receive no responses on LINE and no further response or communication whatsoever on Teams making communication a very difficult issue especially regarding course information or emergency situations that require rapid communication.",No
+89,"Most of the communication has to go through P'Nicky. SIT has hundred and hundred of students. Even if P'Nicky can handle the workload, surely there will be delay in terms of responsiveness.",No
+90,"Sometimes, I do not know who to contact if I need a document. I do contact P' Nick but she might be too tied up with her work to respond to me. Sometimes, my messages are left on read.",No
+91,"IA organizes activities much more frequently than SIT. Additionally, P'Nui's English communication skills are limited, which often makes communication difficult.",Yes
+92,The newacis site can handling the traffic of registration period quite well. The same as when i need an inquiry of official documents -- the process is fast and efficient.,Yes
+93,The service is provided well but it can be hard to communicate or know who exactly to contact for what. It also sometimes take quite long for some processes,Yes
+94,IA (KMUTT) are really helpful and full of activities. Because of them I can feel like home,Yes
+95,Social life for international students are so hard cause they can not communicate with other international students,No
+96,"Since I'm from CS which originally english program, most of the mandatory activity is fine, is good. But there's a lot activities that held in thai that we, as international student would love to participate but because of it's not english-friendly we can't do anything even though we try to be active at univ",Yes
+97,its hard integrating especially when a lot of the events are thai language oriented.,No
+98,"Looking at the Internship opportunities, there are firm/company presentation from time to time. But they are mostly for Thai students. I love SIT Culture activities. But there are a lot of rooms for improvement.",Yes
+99,It's quite good enough.,No
+100,"There are too few activities for international students. Even though activities are not mandatory for activity hours, international students still want the opportunity to participate and meet new friends in SIT and KMUTT. This includes other university activities as well.",No
+101,It improved alot over the years. I didnt even know SIT have a faculty sport day in my 1st and 2nd year. But in this 3rd year alot of the international students get to participate. Same goes for alot of other events which are now held billingual and open to international students.,No
+102,"The SAMO activities, I can see it’s improving year by year",No
+103,I want Lockers,No
+104,"As i mention before, it would be better if there's SIT activities that held in english or international student program, also there's some announcement that we found it's pretty important that only written/announce in thai which make us feel behind and excluded most of the time.",Yes
+105,Monitor on the sec floor are old :(,
+106,"More events that is English focused, or as a main language. That allows the international to understand what the speaker is saying.",No
+107,More communication channels for administrative tasks and more internship opportunities,No
+108,It would be great if there are more staff like P' Nick since she is quite busy to respond to students' message in time of emergencies.,No
+109,Some SIT staff can't speak english that well.,No
+110,"Important academic and opportunity-related information does not always reach Burmese students (or other international students) in a timely or clear manner. For example, information about the Taiwan internship or related programs was not well communicated, while students from other international majors had already been preparing since the previous semester. This information gap creates inequality in access to opportunities and leaves students unsure about whom to contact for guidance or clarification.
+I hope the SIT International Relations office can be more proactive in sharing information about exchange programs and overseas internships. The Faculty of Engineering and Science has its own International Affairs office, which is very active in regularly posting and announcing overseas opportunities. In comparison, SIT IR has been relatively quiet, and some students are not even aware that the office exists.
+If workload or capacity is an issue, perhaps the university could consider hiring additional staff or involving student assistants to help with outreach and communication.",Yes
+111,More staff that handle students problems that can speak English well,No
