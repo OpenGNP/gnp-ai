@@ -4,6 +4,12 @@ __pycache__/
 
 # Virtual environment
 venv/
+.venv/
+
+# Build artifacts
+*.egg-info/
+build/
+dist/
 .env
 
 # FastAPI
@@ -23,3 +29,4 @@ data/cluster_results.csv
 data/finetune_results_fold*.csv
 data/cluster_report.txt
 data/cluster_report*.txt
+data/pipeline_points.csv
