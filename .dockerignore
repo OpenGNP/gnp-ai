@@ -1,0 +1,14 @@
+.git
+.github
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.env
+.env.*
+!.env.example
+.DS_Store
+# Student feedback data + experiment outputs — never baked into the image
+data
+notebooks
+docs
