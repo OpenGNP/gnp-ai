@@ -41,7 +41,7 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: self-hosted
+    runs-on: [self-hosted, ontario2]
     steps:
       - name: Deploy
         run: |
