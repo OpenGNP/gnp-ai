@@ -1,0 +1,664 @@
+feedback_id,raw_text,source
+1,The knowledge does cover overall things but the teaching was a bit fast,real
+2,I found that our curriculum has been made according to universal standards,real
+3,"I think that all of the CSC courses are useful to establish the base for those whom are unfamiliar with the java program. However, I’m unsure of the purpose for some GEN courses.",real
+4,I would say I learn a lot and I learn kinda fast compared to before that I learn by my self but cs102 a bit unpredictable like I not sure what it gonna be on exam like If you just do diy you can’t do quiz hard questions for sure like there is noway the guy that can do it is guy that 100+ leetcode and can do hard leetcode questions but main point is it is hard not becuase it really hard but it because it not gradually increases harder and I would say I got better than other because I got good mentor like P.philix is good at teaching compare to other room but that also make it not stable but I not sure how to make it better I feel like Ai can already teach you all If you don’t know and a lot of tool but I feel like it can be better than this like cal1 and intergral 1 I feel like I listen then practice then I can actually do it but programming it just a but confuse especially it start with java .it kinda complicated to start (If you really don’t know anything ) compare to python but yeah I kinda get professors that java is get more salary than python.,real
+5,"I'm not sure since we're kind of new here, but in this second semester we feel kind of overwhelmed because we have a lot of additional class (lab) while our class (mandatory one) scehdule is already full and packed so we kind of don't have time to explore things by oruselves.",real
+6,"About curriculum, Its because we are learning everything but not focusing on one thing.",real
+7,csc122 should be taught more than let student do,real
+8,"Till now, I find the course really difficult. The increased grade range for this second semester does not help at all. We were informed that first sem there was too much people getting high grades, that's the reason why they increased it. However, this would reflect very negatively on people that had a low grade.",real
+9,some classes need more hands on labs like networking which SIT already have network room in lx building.,real
+10,I would love for more practical lesson + real life stuff,real
+11,"Surely the job landscape has changed and been changing rapidly as AI growth and market is saturated right now. I don't know how curriculum needs to be changed but definitely, we need to do something about it and it's the truth. Let's talk about fundamental courses first, definitely courses like CSC102, 122 are mandatory for CS student to dive into the field so, all these fundamental courses are important meaning no change needed. But when it comes to infrastructure sides, we don't know much about it. Something like Dockers and Kubernetes. These are just an example. But at the end of the day, we should learn on our own since we are CS students and part of the process. I don't have the ultimate solution for this, but something needs to be done.",real
+12,Big Data Analytic Course need to include hands-on experience to students,real
+13,"As a 4th-year student from the old curriculum, in my perspective I’m judging based on (quality / attending one class session) and only on the knowledge gained in class, not outside the classroom. My opinions are as follows:
+
+1. Some courses do not meet the needs of real-world work because they are outdated, such as CSC325, CSC340, and CSC319. In my view, these courses should teach more than just GUI development and restructuring. I think the content is quite old. To make Java more practically useful, it should involve building a full Desktop Application or doing a Big Data project instead.
+
+2. Courses that should be hands-on ended up being mostly theoretical. For example, CSC220 was very disappointing for me in terms of learning networking. I believe this subject has huge potential for further development, but it felt like there was a lot of talk and not much substance. We pay almost 50,000 baht to sit in an old CB building without doing any concrete lab work, unlike other faculties that pay less but have proper networking workshops. Meanwhile, we just sit there, looking at each other, after paying tens of thousands more but receiving lower quality than other departments.
+
+CSC325 was also disappointing. I believe this course still has potential and could offer much more. There was no project at all. Most of the time was spent grinding through SeedLab, documenting it, and then taking the final exam. In the end, there was no real continuation or application. I see this course as almost useful — it was just missing a focus on quality, as it emphasized quantity of work instead.
+
+3. There was a gap in coding practice. During Years 1–2, it was the most stressful period, but also the most beneficial for me. However, in Years 3–4, I felt like coding almost completely disappeared. It became very theory-heavy, with not much hands-on practice. I understand that this might be due to the reasons mentioned in points 1 and 2. I also feel that this may have already been improved in the new curriculum. Overall, though, I found the learning experience enjoyable during my time here.",real
+14,"Language and General Education Courses (LNG and GEN): These courses are not useful and waste a lot of time. Students with very high IELTS scores still have to take basic language classes, which doesn't make sense. Additionally, the grading standards are unclear and difficult to verify.
+Programming Courses: The instructors are skilled and knowledgeable, which is good. However, the courses focus too much on fundamentals and theory. The practical application is very limited. Students have to learn and adapt a lot on their own to be ready for internships.
+Need for More Specialized Elective Courses: The curriculum should offer more specialized track options. For example, UX/UI in course 105 could be a full elective course, but currently it only covers basic concepts that cannot be applied in real work. We would like to see courses such as Game Development with Unity, Advanced Power BI for Data Science
+Other industry-relevant specialized topics
+Courses 100/101 (Coursera ), 301, and 302: These courses waste time and do not measure any real CS skills or abilities. I don't understand the purpose of having them except to take time away from more necessary work.",real
+15,"Most of the courses were quite helpful. To name a few:
+CSC209 Data Structures: While the sessions occasionally ran longer than scheduled, the content and the instructor were excellent. The instructor explained concepts clearly with ample examples. Although class times were sometimes flexible due to his responsibilities as the Department Dean, the material remained highly practical and valuable.
+CSC105 Web Application Development: Some students felt this course only covered the basics, but I personally appreciated the approach. It encourages ""learning how to learn."" Instead of just following instructions, we were pushed to think for ourselves. This is essential for developing the skills needed to form original ideas and manage our own projects.
+Overall, I think a score of 4 is appropriate, as the quality of the class is great but there is still room for improvement.",real
+16,"I feel like the curriculum right now is too data sci oriented but not in a way that we can adapt it in real life.
+For example, the data sci course is too theory based. Not to mention that the content is overlaping with data visualization, big data, data mining. Why don't just combine some together so we can have more knowledge on one particular field within one semester and adapt it in our work field?",real
+17,All courses should adapt and focus more on projects. Also internship duration of 2 months during the summer seems abit too little and also the timing is abit off. Like having the entire last semester of 4th year to be an internship seems like a better way.,real
+18,"I got really high English test score. I really don’t understand why, us as an international program students, have to learn such a basic English concept of an elementary school grader level? Not only it’s not useful it’s also waste of my time and energy to attend all those courses In Jarah course, I don’t understand why LINE is consistently used as the main communication channel for assignments, class materials, and important course details. LINE has limited message history accessibility and is not a professional or reliable platform for managing academic information.
+Using LINE for quick reminders or minor announcements is acceptable. But relying on it for all course-related communication is excessive and problematic. The faculty already provides proper platforms such as Microsoft Teams and CSCMS, which are designed for structured communication, assignment posting, and long-term record keeping.
+Because information is frequently shared only through LINE chats, important details are often missed or lost, leading to confusion among students. Assignments communicated verbally in class, through chat messages, or by asking students to take notes are subjective and lack clarity. As a result, many students are uncertain about task requirements, deadlines, and expectations.
+Assignments and course materials should be consistently posted on Microsoft Teams or CSCMS in a clear, concrete, and centralized manner. This would significantly reduce misunderstandings and help students manage their work more effectively.",real
+19,"For me the curriculum is useful as fundamental knowledge , but as tech field is rapidly grow it's also make me feel like some course are outdated. Such as modern java. This also affect us when applying for internship. Even we the curriculum state that we are Data science path, but even I try to apply for data sci I dont feel like I have enough practical experience.",real
+20,"Everything is find, all the class/lab is good but maybe if it possible SIT can open the study room until night, not just until 7 pm",real
+21,Need more tree,real
+22,It’s all ok but some of the chair are uncomfortable,real
+23,"CB2 classroom tables are small and cramped, making it hard to take notes and focus on lectures.",real
+24,Wifi at CB2306 can’t even use like unstable,real
+25,some class need to use laptop for learn programming but we have a class in cb2 building which the extension plug isnt enough for powered student's latop and devices,real
+26,writing table inside classroom are small except CB2312,real
+27,"The Engineering faculty has better and newer classrooms. Some departments even have dedicated rooms for LAN cable practice, while we don’t have anything like that",real
+28,"We would like to have classes in the LX building, which has much better equipment and facilities compared to the CB building. Additionally, the co-working space in the faculty needs improvement in terms of air circulation and odor control. The equipment should also be updated to be more modern.",real
+29,"I rated this a 4 because the venues aren't flexible enough. Most classes stay in the same room (e.g., CB2306) all semester, even when the lesson requires computer access. It would be better if we could move to the LX building when the course content specifically requires those facilities.",real
+30,I wish we get to use LX more. Especially those classes that req programming,real
+31,All programming courses should be held in LX not cb. Even if it’s only 1 class — it should be at LX. Period.,real
+32,"The new table at CB is very comftable, very appreiciate that faculty improve this.",real
+33,The SIT staffs are good but sometimes they respond a bit slow,real
+34,"We haven't commuicate a lot to SIT staff, so I don't have any feedback",real
+35,"Once again when contacting any staff faculty members of SIT, I will receive no responses on LINE and no further response or communication whatsoever on Teams making communication a very difficult issue especially regarding course information or emergency situations that require rapid communication.",real
+36,"During my internship, I inquired many questions to P' Nick, but my messages are left on read. She could have referred me to someone else if she was busy.",real
+37,"I would like to express a big thanks to PNick while dealing with many stuff related to transfer credit, study plan, course selection, add and drop and other academic stuff.",real
+38,"P’Nick replies slowly. Sometimes a message is left unanswered for a whole day, and I have to follow up again.",real
+39,"SIT staffs are very helpful, and cooperative.",real
+40,SIT staff do their best to help everyone out but language barrier and only P’nicky and P’vichy being the main contact person for everything and everyone is a huge bottle neck for any process,real
+41,"I don’t think line is the best communication way. But I tried reaching them out via email, no response:)",real
+42,"The faculty should increase the number of support staff similar to P’Nicky and P’Vicky. With only two staff members handling a large student population, the workload is excessively heavy. This often leads to delays and workflow bottlenecks, which affect not only students but also other stakeholders involved in academic and administrative processes.",real
+43,"The process is all in the Line, which it shouldn't be, sometime I got left on read.",real
+44,"The activities are fun and pretty helpful, but like I said before maybe SIT can consider to open more for international student (like make more activities that international student/english friendly, open SAMOSIT for international student too) so that we have equal opportunity as Thai student",real
+45,Lab1 in SIT building need to change the table,real
+46,"Everything is fine except the wifi, I don't know why the wifi signal lately has been reallly bad that we have to use our own internet and considering that we're technology student, we need faster internet to do everything",real
+47,Wifi doesn't work properly sometimes,real
+48,Cannot use the wifi while in classes in cb1,real
+49,"Please add monitors to Common Rooms, and add better WiFi connectivity to CB2 classroom as it either keeps disconnecting or wouldn’t appear in the WiFi list, especially SIT-Secure.",real
+50,"Please make wifi great again especially in CB2 3rd floor building, kinda embarrassing that, of all Majors, Computer Science major doesn't have a reliable internet.",real
+51,CB2 have a bad spot of WiFi,real
+52,"For CB building Imma give it 4/10 because before they change the facilities in CB building everything is anything but comfortable, but now I think its slightly better 7/10. As for LX I would give it 8.5/10 sometimes 9/10 just the AC problem sometimes.
+Suggestion please change all the chair/desk/table if it's still those old horrible one which sometimes can't even hold tablet or laptop properly (You know the old table + chair one that can flip, some of those are even older than me). If possible add more electrical plug in CB building too. For LX, it would be great if the AC are more adjustable, you know, sometimes its too hot sometimes too cold.",real
+53,"It's excellent so far I guess, but sometimes we still compete for monitors.",real
+54,Sometime the Training room near the Lift had some smell coming from the AC.,real
+55,"The internet in CB building is extremely slow. I'm not sure if the signal is being blocked. Requesting a VM takes a very long time, staff pass responsibilities to each other, and the process has too many steps with many limitations.",real
+56,"Previously, the number of printers available was insufficient, with only two printers serving a large number of students. This often caused delays, long queues, and inconvenience, especially during peak periods such as assignment deadlines. However, the current situation has improved, and the number or accessibility of printers is now adequate to meet students’ needs. Overall, this issue has been resolved and is no longer a major concern.",real
+57,I really hope we can get the extension socket at every table,real
+58,the labs are okay but the internet and cscms frequently goes down so thats frustrating sometimes especially during exam or quizzes,real
+59,appreciate that we have more printer.,real
+60,I feel like it have too much app like I have ADHD it have cscms and team and leb2 it kinda hard to get track of assignments,real
+61,Would like to see new monitors,real
+62,The AC is sometimes too loud.,real
+63,"I’d love to experience more campus events from SIT, especially a formal prom with gowns and suits.",real
+64,From my 1st year experience I felt like some subject have quite a bit less of class activity especially it the first semester because it's first year I would like to get to know friends more.,real
+65,"I would like the tuition fees to be more transparent — what exactly they are being used for. I want to know what developments have been made so far, since most of the time we just study in the CB building (:D).",real
+66,"Scholarship Limitations:
+Scholarships have too many restrictions for Thai students, and the Academic Award amount decreases every year. This is very disappointing, as many students rely on this financial support.
+International Student Support:
+Moving to a foreign country is already difficult. I hope the faculty can make us feel warm and safe by building a stronger community for international students.
+Internship Support:
+The faculty needs to provide much more support for internships. Jobs for international students are very rare and often pay less than positions for Thai students. I would like to see partnerships similar to those in the Engineering faculty to make finding internships easier.",real
+67,"The current internship period of two months is considered insufficient for students to gain meaningful, hands-on experience. Within this limited timeframe, students often spend a large portion of the internship on onboarding, training, and adjustment, leaving little time to develop real professional skills or make substantial contributions. Extending the internship to four months or an entire semester—as practiced in other curricula—would allow students to gain deeper industry exposure, stronger practical skills, and better preparation for future employment.",real
+68,"LNG class, AJ.Jarah making Line as a learning platform, I want it to be on Microsoft team as it's more professional. Also when she give us assignment it's not very clear as she always use line and has no recording",real
+69,"Me personally don't have any issue, but my friends often have some issue regarding the slow process about documents",real
+70,"The process is not standardized, slow response",real
+71,The process this year is good and fast unlike previous years.,real
+72,Sometime the process of approving document takes time.,real
+73,"Immigration processes take a long time and have caused us to miss classes repeatedly. Is it possible to arrange group visa processing through the university or SIT directly? According to the regulations, we understand this is our responsibility, but additional support from the institution would be very helpful and reduce the impact on our studies.",real
+74,The new Visa system that IA KMUTT recently adopted was such a big help.,real
+75,We mostly have to go through IA and contact with them. I’ve never really talked to SIT about visa related stuff,real
+76,"The process is slow but it’s not KMUTT fault I truly understand. But it really does make, at some point, the uni experience bad because of it",real
+77,It's enough but could be better if all the staff could speak english so there's no misscommunication,real
+78,More english speaking staff,real
+79,More English spoken staff,real
+80,"When contacting any staff faculty members of SIT, I will receive no responses on LINE and no further response or communication whatsoever on Teams making communication a very difficult issue especially regarding course information or emergency situations that require rapid communication.",real
+81,"Most of the communication has to go through P'Nicky. SIT has hundred and hundred of students. Even if P'Nicky can handle the workload, surely there will be delay in terms of responsiveness.",real
+82,"Sometimes, I do not know who to contact if I need a document. I do contact P' Nick but she might be too tied up with her work to respond to me. Sometimes, my messages are left on read.",real
+83,"IA organizes activities much more frequently than SIT. Additionally, P'Nui's English communication skills are limited, which often makes communication difficult.",real
+84,The newacis site can handling the traffic of registration period quite well. The same as when i need an inquiry of official documents -- the process is fast and efficient.,real
+85,The service is provided well but it can be hard to communicate or know who exactly to contact for what. It also sometimes take quite long for some processes,real
+86,IA (KMUTT) are really helpful and full of activities. Because of them I can feel like home,real
+87,Social life for international students are so hard cause they can not communicate with other international students,real
+88,"Since I'm from CS which originally english program, most of the mandatory activity is fine, is good. But there's a lot activities that held in thai that we, as international student would love to participate but because of it's not english-friendly we can't do anything even though we try to be active at univ",real
+89,its hard integrating especially when a lot of the events are thai language oriented.,real
+90,"Looking at the Internship opportunities, there are firm/company presentation from time to time. But they are mostly for Thai students. I love SIT Culture activities. But there are a lot of rooms for improvement.",real
+91,"There are too few activities for international students. Even though activities are not mandatory for activity hours, international students still want the opportunity to participate and meet new friends in SIT and KMUTT. This includes other university activities as well.",real
+92,It improved alot over the years. I didnt even know SIT have a faculty sport day in my 1st and 2nd year. But in this 3rd year alot of the international students get to participate. Same goes for alot of other events which are now held billingual and open to international students.,real
+93,"The SAMO activities, I can see it’s improving year by year",real
+94,I want Lockers,real
+95,"As i mention before, it would be better if there's SIT activities that held in english or international student program, also there's some announcement that we found it's pretty important that only written/announce in thai which make us feel behind and excluded most of the time.",real
+96,Monitor on the sec floor are old :(,real
+97,"More events that is English focused, or as a main language. That allows the international to understand what the speaker is saying.",real
+98,More communication channels for administrative tasks and more internship opportunities,real
+99,It would be great if there are more staff like P' Nick since she is quite busy to respond to students' message in time of emergencies.,real
+100,Some SIT staff can't speak english that well.,real
+101,"Important academic and opportunity-related information does not always reach Burmese students (or other international students) in a timely or clear manner. For example, information about the Taiwan internship or related programs was not well communicated, while students from other international majors had already been preparing since the previous semester. This information gap creates inequality in access to opportunities and leaves students unsure about whom to contact for guidance or clarification.
+I hope the SIT International Relations office can be more proactive in sharing information about exchange programs and overseas internships. The Faculty of Engineering and Science has its own International Affairs office, which is very active in regularly posting and announcing overseas opportunities. In comparison, SIT IR has been relatively quiet, and some students are not even aware that the office exists.
+If workload or capacity is an issue, perhaps the university could consider hiring additional staff or involving student assistants to help with outreach and communication.",real
+102,More staff that handle students problems that can speak English well,real
+103,"A lecturer asked me for 5,000 baht in exchange for a passing grade in CSC102.",violation
+104,My laptop was stolen from the CB2 common room and the office refused to check the CCTV.,violation
+105,A senior student threatened to hit me after I reported him to the department.,violation
+106,Someone was selling the midterm exam paper in a LINE group before the exam.,violation
+107,A staff member used the department budget to buy personal equipment for his home.,violation
+108,The lab supervisor made international students work unpaid overtime and hinted our visas depend on it.,violation
+109,A lecturer took photos of students in class without consent and posted them on his public page.,violation
+110,The professor gives higher marks to students who pay for his private tutoring sessions.,violation
+111,My advisor put his own name as first author on work I did entirely myself.,violation
+112,A TA shared the answer key with his own friends the night before the exam.,violation
+113,One lecturer inflates scores so the same course gives completely different grades by section.,violation
+114,A lecturer told the whole class about a student's mental health record.,violation
+115,The scholarship recipient was decided before the interviews were even held.,violation
+116,"After I filed a complaint about the course, the same staff member started marking me down.",violation
+117,A professor pressured us to work at his startup as unpaid interns in exchange for credit.,violation
+118,Students in my section copied the whole assignment and the TA ignored it when told.,violation
+119,The advisor humiliated a student in front of the class for not affording the field trip.,violation
+120,A lecturer mocked a student's accent every session until that student stopped attending.,violation
+121,Staff keep calling an international student 'the foreigner' instead of using their name.,violation
+122,A professor told a female student that engineering is not a field for women.,violation
+123,Senior students force juniors to do their assignments and call it tradition.,violation
+124,A lecturer read out the failing students' grades out loud to shame them.,violation
+125,The wifi in CB2 keeps disconnecting during lab sessions.,violation
+126,This course is a complete waste of time and the lecturer is useless.,violation
+127,Cafeteria queues at lunch are far too long for evening students.,violation
+128,The curriculum is outdated and does not cover Docker or Kubernetes.,violation
+129,Assignments are announced on LINE which makes them impossible to find later.,violation
+130,The air conditioning in the LX building is broken again.,violation
+131,The exam was unfair because it covered material we never studied in class.,violation
+132,Nobody from the office answers the phone during enrollment week.,violation
+133,The workload in year 2 is crushing and I barely sleep.,violation
+134,I pay a lot of tuition and the lab computers are still too slow to run Docker.,violation
+135,An instructor cancelled classes several times without notice or a make-up session.,violation
+136,Group members removed my name from the project submission after an argument.,violation
+137,"The project in CSC210 connected theory to something real, and it makes a real difference. Separately, No complaints here: everything for INT202 now lands in one place on LINE.",synthetic
+138,"Urgent messages to the office sit unread for days, which is how I submitted late twice.",synthetic
+139,My main issue this term is that the DSI201 lecturer moves on before anyone has followed.,synthetic
+140,Every term the same thing: every seat is taken by nine in the morning.,synthetic
+141,Other faculties manage this better — here the registration system goes down at the start of term.,synthetic
+142,"Small thing, but SIT-Secure never appears in the network list in CB1.",synthetic
+143,We get a numeric grade with no comments at all.,synthetic
+144,"It would help a lot if the printing service in the library is cash only were not the case. The instructor for DSI201 explains the reasoning, not just the answer, and it makes a real difference.",synthetic
+145,I raised this last semester and nothing has changed: there are no lockers for students who commute.,synthetic
+146,I raised this last semester and nothing has changed: the air conditioning in CB2 is either off or freezing.,synthetic
+147,A lecturer in CSC102 asked students for money in exchange for a passing grade.,synthetic
+148,Other faculties manage this better — here internship dates clash with the exam period. The other thing is Worth saying that the placements on offer only cover a narrow set of roles.,synthetic
+149,"Small thing, but orientation covered nothing about visas or residence registration.",synthetic
+150,Every term the same thing: the printing service in the library is cash only. My main issue this term is that CSC231 repeats most of what we already did in LNG103.,synthetic
+151,"Small thing, but there are no lockers for students who commute. The other thing is Please can someone look at this: we get a numeric grade with no comments at all.",synthetic
+152,"Not a complaint exactly, but the lab machines in LX10 cannot run Docker for CSC231. The other thing is No complaints here: everything for CSC102 now lands in one place on email.",synthetic
+153,My main issue this term is that there are never enough monitors in the common room for pair programming.,synthetic
+154,Credit where it is due: the wifi in the SIT building has been stable all semester.,synthetic
+155,Worth saying that orientation covered nothing about visas or residence registration.,synthetic
+156,One thing that works well is that the CV workshop was genuinely useful.,synthetic
+157,Every term the same thing: the CSC231 lecturer moves on before anyone has followed.,synthetic
+158,One thing that works well is that the international office replies quickly and in English. The other thing is Other faculties manage this better — here the connection in the common room dies as soon as a full class joins.,synthetic
+159,I raised this last semester and nothing has changed: the registration system goes down before exam week.,synthetic
+160,A professor pressured students to work at his company for free in exchange for credit.,synthetic
+161,Every term the same thing: the CSC231 lecturer moves on before anyone has followed. The other thing is It is frustrating that the printing service in the library is cash only.,synthetic
+162,Worth saying that activity sign-ups assume everyone reads Thai.,synthetic
+163,There are finally enough printers for the whole floor.,synthetic
+164,The new online form removed most of the paperwork.,synthetic
+165,The signal does not reach the back rows of LX10 — and I lose whatever I was submitting.,synthetic
+166,One thing that works well is that the co-working space was refurbished and it is far more usable now.,synthetic
+167,"The CSC231 lecturer moves on before anyone has followed, so I learn the material from YouTube.",synthetic
+168,It is frustrating that internship dates clash with the exam period.,synthetic
+169,"We get a numeric grade with no comments at all, and appeals go nowhere.",synthetic
+170,My laptop was taken from CB2306 and the office refused to check the CCTV.,synthetic
+171,"It would help a lot if announcements for international students are Thai-only were not the case. The other thing is The assignment brief for LNG103 changed during submission week, so nobody knew what to revise.",synthetic
+172,No complaints here: changes are announced early enough to plan around. It would help a lot if the registration system goes down before exam week were not the case.,synthetic
+173,CSC122 assumes prior experience that most of us do not have. This has been the case all term.,synthetic
+174,A lecturer read the failing students' grades out loud to shame them.,synthetic
+175,A staff member used department budget to buy equipment for personal use.,synthetic
+176,The international office replies quickly and in English.,synthetic
+177,"Please can someone look at this: scholarship conditions exclude anyone who works part time. The other thing is The instructor for CSC231 explains the reasoning, not just the answer.",synthetic
+178,Please can someone look at this: career events are announced a week in advance. Library staff find what I need straight away.,synthetic
+179,"Not a complaint exactly, but the prayer room is used as a storage space.",synthetic
+180,A lecturer mocked a student's accent every session until they stopped attending.,synthetic
+181,Please can someone look at this: material for DSI201 is split between LINE and email.,synthetic
+182,I raised this last semester and nothing has changed: DSI201 still teaches tools the industry dropped years ago.,synthetic
+183,"Everything for CSC210 now lands in one place on LINE, and it makes a real difference.",synthetic
+184,"Small thing, but the assignment brief for LNG103 changed during submission week. Separately, Not a complaint exactly, but the prayer room is used as a storage space.",synthetic
+185,The printing service in the library is cash only — so we work in the corridor instead. The other thing is Every term the same thing: there is no way to search past announcements on Google Classroom.,synthetic
+186,Please can someone look at this: half the power outlets in the common room are dead.,synthetic
+187,Worth saying that the lecturer for DSI201 reads the slides without explaining any reasoning.,synthetic
+188,Worth saying that the registration system goes down in the afternoon.,synthetic
+189,CSC210 builds up at a pace that actually works.,synthetic
+190,"It would help a lot if the air conditioning in S11 is either off or freezing were not the case. Separately, It would help a lot if schedule changes are announced verbally in class and nowhere else were not the case.",synthetic
+191,Credit where it is due: activity announcements are bilingual this year.,synthetic
+192,Other faculties manage this better — here the placements on offer only cover a narrow set of roles.,synthetic
+193,A senior student threatened me after I reported him to the department.,synthetic
+194,"After I complained about DSI201, the same staff member started marking me down.",synthetic
+195,No complaints here: the project in DSI201 connected theory to something real.,synthetic
+196,"The project in LNG103 connected theory to something real, and it makes a real difference. The other thing is Every counter asks for a different set of forms, so I missed the scholarship deadline.",synthetic
+197,"Small thing, but the monitors in LX10 are too dim to use from more than a metre away.",synthetic
+198,"There are never enough monitors in the second floor study area for pair programming, so three of us share one screen.",synthetic
+199,Other faculties manage this better — here there is no way to search past announcements on the LEB2 system.,synthetic
+200,My main issue this term is that the registration system goes down in the afternoon.,synthetic
+201,It would help a lot if office hours overlap exactly with our class timetable were not the case.,synthetic
+202,"Not a complaint exactly, but the lunch queue takes twenty minutes during lab sessions.",synthetic
+203,One thing that works well is that marking in INT202 was fair and matched what we studied.,synthetic
+204,"The wifi asks me to re-authenticate three or four times a day. This has been the case all term. The other thing is One thing that works well is that the instructor for INT202 explains the reasoning, not just the answer.",synthetic
+205,Please can someone look at this: the lighting in the second floor study area is too dim to read printed handouts.,synthetic
+206,Every counter asks for a different set of forms. This has been the case all term.,synthetic
+207,One thing that works well is that assignments in CSC102 come back with comments I can act on.,synthetic
+208,INT202 jumps to frameworks before covering the fundamentals. This has been the case all term.,synthetic
+209,My main issue this term is that DSI201 jumps to frameworks before covering the fundamentals.,synthetic
+210,"Credit where it is due: CB2312 was refurbished and it is far more usable now. The other thing is Nothing in the programme covers deployment or infrastructure, though I understand the constraints.",synthetic
+211,The scholarship was decided before the interviews were held.,synthetic
+212,"Not a complaint exactly, but orientation covered nothing about visas or residence registration.",synthetic
+213,"Minor point: project work only starts in year three, which is far too late. Separately, Small thing, but whether I get help in English depends on who is at the counter.",synthetic
+214,"It would help a lot if the lunch queue takes twenty minutes on enrollment day were not the case. Separately, It would help a lot if whether I get help in English depends on who is at the counter were not the case.",synthetic
+215,"Not a complaint exactly, but the chairs in Lab 1 are painful to sit on for a full session.",synthetic
+216,Every term the same thing: document approval takes weeks with no status update.,synthetic
+217,It would help a lot if uploads fail halfway through on the CB2 network were not the case.,synthetic
+218,One thing that works well is that everything for CSC231 now lands in one place on Google Classroom.,synthetic
+219,It is frustrating that CSC210 still teaches tools the industry dropped years ago.,synthetic
+220,"Marking in LNG103 was fair and matched what we studied, and it makes a real difference. The other thing is I raised this last semester and nothing has changed: the monitors in the common room are too dim to use from more than a metre away.",synthetic
+221,I raised this last semester and nothing has changed: a single request needs three signatures from three offices.,synthetic
+222,My main issue this term is that the placements on offer only cover a narrow set of roles.,synthetic
+223,"There is nowhere to eat on campus after six, which is hardest on commuting students. Separately, One thing that works well is that changes are announced early enough to plan around.",synthetic
+224,Office hours overlap exactly with our class timetable.,synthetic
+225,Worth saying that I get logged out of the campus wifi every time I move between rooms.,synthetic
+226,It would help a lot if the air conditioning in CB2 is either off or freezing were not the case.,synthetic
+227,A single request needs three signatures from three offices — so I missed the scholarship deadline.,synthetic
+228,It is frustrating that the wifi asks me to re-authenticate three or four times a day.,synthetic
+229,Career events are announced a week in advance — so most of us find placements ourselves.,synthetic
+230,Please can someone look at this: there is no course that covers testing in any depth.,synthetic
+231,"There are no lockers for students who commute — which is hardest on commuting students. Separately, One thing that works well is that marking in DSI201 was fair and matched what we studied.",synthetic
+232,"The lab machines take fifteen minutes just to log in, though I understand the constraints. No complaints here: the international office replies quickly and in English.",synthetic
+233,"Not a complaint exactly, but urgent messages to the office sit unread for days.",synthetic
+234,"It would help a lot if there is nowhere to eat on campus after six were not the case. Separately, The LNG103 final was twice as long as the time allowed.",synthetic
+235,There are never enough monitors in CB2306 for pair programming. Other faculties manage this better — here schedule changes are announced verbally in class and nowhere else.,synthetic
+236,"The cafeteria closes before evening classes finish — so people skip meals before evening labs. The other thing is Small thing, but translated material arrives after the event has happened.",synthetic
+237,Every term the same thing: the DSI201 midterm covered topics that were never taught.,synthetic
+238,No complaints here: library staff find what I need straight away.,synthetic
+239,Urgent messages to the office sit unread for days. Worth saying that course announcements only go out on Microsoft Teams and disappear in the scroll.,synthetic
+240,My main issue this term is that the wifi in CB2306 drops every few minutes.,synthetic
+241,"Minor point: the door to the second floor study area has been broken since the start of term. CSC210 builds up at a pace that actually works, and it makes a real difference.",synthetic
+242,It is frustrating that the CSC210 final was twice as long as the time allowed.,synthetic
+243,Every term the same thing: I get logged out of the campus wifi every time I move between rooms.,synthetic
+244,"The internship is two months, which is too short to contribute anything, and the paperwork falls on the student.",synthetic
+245,Worth saying that there is nowhere to eat on campus after six. The other thing is I raised this last semester and nothing has changed: the desks in CB2306 cannot hold a laptop and a notebook at once.,synthetic
+246,Worth saying that the signal does not reach the back rows of CB2306.,synthetic
+247,It is frustrating that a single request needs three signatures from three offices.,synthetic
+248,"The CSC122 lecturer moves on before anyone has followed, though I understand the constraints. Separately, No complaints here: network coverage finally reaches every corner of the common room.",synthetic
+249,A lecturer in LNG103 asked students for money in exchange for a passing grade.,synthetic
+250,"It would help a lot if project work only starts in year three, which is far too late were not the case. The other thing is Announcements for international students are Thai-only.",synthetic
+251,"Every seat is taken by nine in the morning. Separately, Worth saying that DSI201 assumes prior experience that most of us do not have.",synthetic
+252,An advisor humiliated a student in front of the class for not affording the field trip.,synthetic
+253,"The instructor for CSC122 explains the reasoning, not just the answer, and it makes a real difference.",synthetic
+254,Worth saying that whether I get help in English depends on who is at the counter. The other thing is No complaints here: the project in CSC210 connected theory to something real.,synthetic
+255,Please can someone look at this: scholarship conditions exclude anyone who works part time.,synthetic
+256,Every seat is taken by nine in the morning.,synthetic
+257,The lecturer for CSC210 gives higher marks to students who pay for his private tutoring.,synthetic
+258,"The marking scheme for CSC102 was never published, so nobody knew what to revise.",synthetic
+259,"Credit where it is due: the career fair connected me to the company I now work for. Separately, Minor point: the lighting in Lab 1 is too dim to read printed handouts.",synthetic
+260,"Small thing, but schedule changes are announced verbally in class and nowhere else.",synthetic
+261,Nothing in the programme covers deployment or infrastructure. This has been the case all term.,synthetic
+262,"Not a complaint exactly, but Lab 1 has not been cleaned properly in weeks.",synthetic
+263,It would help a lot if the registration system goes down on enrollment day were not the case.,synthetic
+264,Nobody explains how the internship grade is decided.,synthetic
+265,"Half the power outlets in the second floor study area are dead, though I understand the constraints.",synthetic
+266,Minor point: announcements for international students are Thai-only.,synthetic
+267,It is frustrating that whether I get help in English depends on who is at the counter.,synthetic
+268,"I raised this last semester and nothing has changed: the cafeteria closes before evening classes finish. Separately, Small thing, but announcements for international students are Thai-only.",synthetic
+269,"Announcements for international students are Thai-only, though I understand the constraints. Separately, There are three copies of a set text for two hundred students — which pushes everyone to cafes off campus.",synthetic
+270,No complaints here: changes are announced early enough to plan around.,synthetic
+271,Every term the same thing: grading in CSC231 is noticeably different between sections.,synthetic
+272,"One thing that works well is that the project in INT202 connected theory to something real. We are told to work it out ourselves whenever we ask for help, which is why attendance keeps dropping.",synthetic
+273,"Translated material arrives after the event has happened. I raised this last semester and nothing has changed: the internship is two months, which is too short to contribute anything.",synthetic
+274,The lab supervisor made international students work unpaid overtime and implied our visas depend on it.,synthetic
+275,the LX building is kept clean and the rooms are comfortable.,synthetic
+276,Please can someone look at this: the INT202 lecturer moves on before anyone has followed.,synthetic
+277,Credit where it is due: there are finally enough printers for the whole floor.,synthetic
+278,Minor point: orientation covered nothing about visas or residence registration.,synthetic
+279,No complaints here: the cafeteria has far better options than last year.,synthetic
+280,"CB2306 was refurbished and it is far more usable now, and it makes a real difference.",synthetic
+281,The monitors in CB2312 are too dim to use from more than a metre away — which eats half the lab session.,synthetic
+282,It is frustrating that the cafeteria closes before evening classes finish.,synthetic
+283,I get logged out of the campus wifi every time I move between rooms — so I tether from my phone instead.,synthetic
+284,"My main issue this term is that the answer to the same question changes depending on who asks. Separately, The lecturer for DSI201 reads the slides without explaining any reasoning, though I understand the constraints.",synthetic
+285,"It would help a lot if there are three copies of a set text for two hundred students were not the case. Separately, The CSC122 midterm covered topics that were never taught, though I understand the constraints.",synthetic
+286,"Small thing, but the lecturer for INT202 reads the slides without explaining any reasoning.",synthetic
+287,Translated material arrives after the event has happened.,synthetic
+288,Credit where it is due: changes are announced early enough to plan around.,synthetic
+289,"Small thing, but the monitors in the co-working space are too dim to use from more than a metre away.",synthetic
+290,"CSC102 builds up at a pace that actually works, and it makes a real difference. We get a numeric grade with no comments at all — so nobody knew what to revise.",synthetic
+291,One thing that works well is that the new online form removed most of the paperwork.,synthetic
+292,Other faculties manage this better — here the registration system goes down during lab sessions.,synthetic
+293,My main issue this term is that the lunch queue takes twenty minutes on enrollment day.,synthetic
+294,The INT202 midterm covered topics that were never taught. This has been the case all term.,synthetic
+295,"Not a complaint exactly, but the printing service in the library is cash only.",synthetic
+296,One thing that works well is that the library is quiet and well run.,synthetic
+297,"The lab machines take fifteen minutes just to log in. This has been the case all term. Separately, Please can someone look at this: there are never enough monitors in CB2306 for pair programming.",synthetic
+298,"Every term the same thing: uploads fail halfway through on the CB2 network. Not a complaint exactly, but we get a numeric grade with no comments at all.",synthetic
+299,"Other faculties manage this better — here we get a numeric grade with no comments at all. The other thing is The new online form removed most of the paperwork, and it makes a real difference.",synthetic
+300,My main issue this term is that the lab machines in CB2312 cannot run Docker for DSI201.,synthetic
+301,No complaints here: the LX building is kept clean and the rooms are comfortable.,synthetic
+302,Every term the same thing: CSC102 assumes prior experience that most of us do not have.,synthetic
+303,It is frustrating that translated material arrives after the event has happened.,synthetic
+304,Please can someone look at this: nobody can tell me which office my form is sitting in.,synthetic
+305,Worth saying that the wifi asks me to re-authenticate three or four times a day.,synthetic
+306,"Every seat is taken by nine in the morning, so we work in the corridor instead.",synthetic
+307,"There is nowhere to eat on campus after six, though I understand the constraints.",synthetic
+308,It is frustrating that deadline changes reach us after the deadline.,synthetic
+309,Other faculties manage this better — here translated material arrives after the event has happened.,synthetic
+310,No complaints here: the machines in CB2312 were upgraded and everything runs properly now.,synthetic
+311,Every term the same thing: course announcements only go out on LINE and disappear in the scroll.,synthetic
+312,It would help a lot if the printers near CB2 are out of ink more often than not were not the case.,synthetic
+313,CSC231 builds up at a pace that actually works.,synthetic
+314,It is frustrating that course announcements only go out on Microsoft Teams and disappear in the scroll.,synthetic
+315,"Activity announcements are bilingual this year, and it makes a real difference.",synthetic
+316,"Library staff find what I need straight away. Separately, Not a complaint exactly, but the signal does not reach the back rows of the common room.",synthetic
+317,It would help a lot if the registration system goes down during evening classes were not the case.,synthetic
+318,Other faculties manage this better — here internship dates clash with the exam period.,synthetic
+319,"The cafeteria closes before evening classes finish. This has been the case all term. Separately, International students hear about events from friends rather than the faculty, so we miss most of what is organised.",synthetic
+320,"My main issue this term is that the lunch queue takes twenty minutes in the afternoon. Separately, It would help a lot if DSI201 still teaches tools the industry dropped years ago were not the case.",synthetic
+321,I raised this last semester and nothing has changed: the prayer room is used as a storage space.,synthetic
+322,Every term the same thing: orientation covered nothing about visas or residence registration.,synthetic
+323,"My main issue this term is that the cafeteria closes before evening classes finish. Small thing, but the CSC210 lecturer moves on before anyone has followed.",synthetic
+324,Other faculties manage this better — here the marking scheme for DSI201 was never published.,synthetic
+325,One thing that works well is that the wifi in CB2 has been stable all semester. LNG103 jumps to frameworks before covering the fundamentals. This has been the case all term.,synthetic
+326,There are three copies of a set text for two hundred students — which pushes everyone to cafes off campus.,synthetic
+327,Worth saying that group study rooms cannot be booked online.,synthetic
+328,"The printing service in the library is cash only, so we work in the corridor instead.",synthetic
+329,"Worth saying that every counter asks for a different set of forms. Separately, I raised this last semester and nothing has changed: the printing service in the library is cash only.",synthetic
+330,"Not a complaint exactly, but there are no lockers for students who commute.",synthetic
+331,"Every seat is taken by nine in the morning, though I understand the constraints.",synthetic
+332,Minor point: international students hear about events from friends rather than the faculty.,synthetic
+333,"Not a complaint exactly, but material for DSI201 is split between Microsoft Teams and Google Classroom. Worth saying that the door to CB2312 has been broken since the start of term.",synthetic
+334,Other faculties manage this better — here half the power outlets in CB2312 are dead. Credit where it is due: activity announcements are bilingual this year.,synthetic
+335,I raised this last semester and nothing has changed: nothing in the programme covers deployment or infrastructure. I raised this last semester and nothing has changed: announcements for international students are Thai-only.,synthetic
+336,It would help a lot if the LNG103 final was twice as long as the time allowed were not the case.,synthetic
+337,"Not a complaint exactly, but internship dates clash with the exam period.",synthetic
+338,My main issue this term is that international students hear about events from friends rather than the faculty.,synthetic
+339,"The printing service in the library is cash only, though I understand the constraints.",synthetic
+340,It is frustrating that the air conditioning in CB1 is either off or freezing. The other thing is It is frustrating that activity sign-ups assume everyone reads Thai.,synthetic
+341,"A single request needs three signatures from three offices, though I understand the constraints.",synthetic
+342,Credit where it is due: the wifi in S11 has been stable all semester.,synthetic
+343,"Network coverage finally reaches every corner of CB2306. Separately, I raised this last semester and nothing has changed: project work only starts in year three, which is far too late.",synthetic
+344,Worth saying that there are no lockers for students who commute.,synthetic
+345,Scholarship conditions exclude anyone who works part time.,synthetic
+346,The CSC210 lecturer moves on before anyone has followed.,synthetic
+347,We are told to work it out ourselves whenever we ask for help. The other thing is A single request needs three signatures from three offices. This has been the case all term.,synthetic
+348,"One thing that works well is that the instructor for CSC122 explains the reasoning, not just the answer. Separately, Other faculties manage this better — here uploads fail halfway through on the CB2 network.",synthetic
+349,Worth saying that the lab machines take fifteen minutes just to log in. The other thing is There is nowhere to eat on campus after six.,synthetic
+350,"Activity sign-ups assume everyone reads Thai. Separately, Minor point: document approval takes weeks with no status update.",synthetic
+351,My request was processed within a day this term.,synthetic
+352,Document approval takes weeks with no status update. This has been the case all term.,synthetic
+353,Other faculties manage this better — here the signal does not reach the back rows of the common room.,synthetic
+354,It would help a lot if urgent messages to the office sit unread for days were not the case.,synthetic
+355,"It is frustrating that the projector in the co-working space loses signal every ten minutes. Separately, Other faculties manage this better — here every counter asks for a different set of forms.",synthetic
+356,Credit where it is due: the international office replies quickly and in English.,synthetic
+357,"Other faculties manage this better — here uploads fail halfway through on the the SIT building network. Separately, I raised this last semester and nothing has changed: a single request needs three signatures from three offices.",synthetic
+358,Every term the same thing: the monitors in Lab 1 are too dim to use from more than a metre away.,synthetic
+359,One thing that works well is that the international office replies quickly and in English.,synthetic
+360,"Assignments in LNG103 come back with comments I can act on, and it makes a real difference.",synthetic
+361,"Announcements for international students are Thai-only, though I understand the constraints. Separately, The CV workshop was genuinely useful, and it makes a real difference.",synthetic
+362,the second floor study area was refurbished and it is far more usable now. Minor point: the door to CB2306 has been broken since the start of term.,synthetic
+363,"My request was processed within a day this term. Separately, Please can someone look at this: project work only starts in year three, which is far too late.",synthetic
+364,I raised this last semester and nothing has changed: there is no course that covers testing in any depth.,synthetic
+365,"Not a complaint exactly, but the desks in the second floor study area cannot hold a laptop and a notebook at once. The other thing is One thing that works well is that CSC231 builds up at a pace that actually works.",synthetic
+366,The printers near CB2 are out of ink more often than not — so three of us share one screen.,synthetic
+367,"Everything for DSI201 now lands in one place on email, and it makes a real difference.",synthetic
+368,"The monitors in Lab 1 are too dim to use from more than a metre away. This has been the case all term. Separately, Other faculties manage this better — here scholarship conditions exclude anyone who works part time.",synthetic
+369,Worth saying that the lunch queue takes twenty minutes at the start of term.,synthetic
+370,A single request needs three signatures from three offices.,synthetic
+371,Credit where it is due: the wifi in CB1 has been stable all semester.,synthetic
+372,DSI201 repeats most of what we already did in CSC102 — and we end up teaching ourselves anyway.,synthetic
+373,Grading in INT202 is noticeably different between sections — so nobody knew what to revise.,synthetic
+374,The cafeteria closes before evening classes finish.,synthetic
+375,Worth saying that the library closes too early during lab sessions.,synthetic
+376,I raised this last semester and nothing has changed: there are three copies of a set text for two hundred students. It is frustrating that the answer to the same question changes depending on who asks.,synthetic
+377,"Whether I get help in English depends on who is at the counter, though I understand the constraints. The lab machines in the common room cannot run Docker for INT202.",synthetic
+378,"Office hours overlap exactly with our class timetable, though I understand the constraints. The other thing is The lecturer for CSC231 reads the slides without explaining any reasoning. This has been the case all term.",synthetic
+379,"Nobody can tell me which office my form is sitting in, so I missed the scholarship deadline. Separately, Half the power outlets in CB2306 are dead, and there is nowhere else free to work.",synthetic
+380,"Credit where it is due: food on campus is cheap and quick. Separately, One thing that works well is that CB2306 was refurbished and it is far more usable now.",synthetic
+381,Worth saying that there is no way to search past announcements on Microsoft Teams.,synthetic
+382,Other faculties manage this better — here the monitors in CB2312 are too dim to use from more than a metre away. The other thing is The partner company list is much shorter than other faculties offer — and the paperwork falls on the student.,synthetic
+383,"the second floor study area was refurbished and it is far more usable now. Separately, Internship dates clash with the exam period. This has been the case all term.",synthetic
+384,One thing that works well is that library staff find what I need straight away. DSI201 assumes prior experience that most of us do not have.,synthetic
+385,It is frustrating that the partner company list is much shorter than other faculties offer.,synthetic
+386,Worth saying that international students hear about events from friends rather than the faculty.,synthetic
+387,Document approval takes weeks with no status update — and I had to take a day off to chase it.,synthetic
+388,Every term the same thing: the lighting in CB2312 is too dim to read printed handouts.,synthetic
+389,"Not a complaint exactly, but the cafeteria closes before evening classes finish.",synthetic
+390,No complaints here: there are finally enough printers for the whole floor.,synthetic
+391,"Every seat is taken by nine in the morning — which pushes everyone to cafes off campus. Not a complaint exactly, but CSC102 assumes prior experience that most of us do not have.",synthetic
+392,My main issue this term is that we are told to work it out ourselves whenever we ask for help.,synthetic
+393,The assignment brief for LNG103 changed during submission week.,synthetic
+394,Please can someone look at this: the cafeteria closes before evening classes finish.,synthetic
+395,Translated material arrives after the event has happened. This has been the case all term.,synthetic
+396,"Tutorials for DSI201 are run by someone who has not seen the assignment, though I understand the constraints.",synthetic
+397,Minor point: tutorials for INT202 are run by someone who has not seen the assignment.,synthetic
+398,"The lab machines in the second floor study area cannot run Docker for INT202, though I understand the constraints.",synthetic
+399,Uploads fail halfway through on the the SIT building network.,synthetic
+400,Credit where it is due: the cafeteria has far better options than last year.,synthetic
+401,Material for CSC102 is split between the LEB2 system and email.,synthetic
+402,My main issue this term is that group study rooms cannot be booked online.,synthetic
+403,"It is frustrating that project work only starts in year three, which is far too late.",synthetic
+404,Worth saying that tutorials for LNG103 are run by someone who has not seen the assignment.,synthetic
+405,"Nobody can tell me which office my form is sitting in, and I had to take a day off to chase it.",synthetic
+406,"After I complained about LNG103, the same staff member started marking me down.",synthetic
+407,"Credit where it is due: the CV workshop was genuinely useful. Separately, The new online form removed most of the paperwork, and it makes a real difference.",synthetic
+408,Credit where it is due: the CV workshop was genuinely useful.,synthetic
+409,It would help a lot if SIT-Secure never appears in the network list in CB2 were not the case.,synthetic
+410,Minor point: the desks in CB2306 cannot hold a laptop and a notebook at once.,synthetic
+411,"It would help a lot if the cafeteria closes before evening classes finish were not the case. Separately, Network coverage finally reaches every corner of Lab 1.",synthetic
+412,"Group study rooms cannot be booked online, though I understand the constraints.",synthetic
+413,Minor point: there are three copies of a set text for two hundred students.,synthetic
+414,DSI201 jumps to frameworks before covering the fundamentals.,synthetic
+415,"There are never enough monitors in Lab 1 for pair programming, though I understand the constraints.",synthetic
+416,"The elective list has not changed in three years, though I understand the constraints.",synthetic
+417,"I get logged out of the campus wifi every time I move between rooms, though I understand the constraints.",synthetic
+418,It would help a lot if scholarship conditions exclude anyone who works part time were not the case. My main issue this term is that a single request needs three signatures from three offices.,synthetic
+419,"Credit where it is due: the cafeteria has far better options than last year. The other thing is The lab machines take fifteen minutes just to log in, which eats half the lab session.",synthetic
+420,"The partner company list is much shorter than other faculties offer, though I understand the constraints.",synthetic
+421,Every term the same thing: SIT-Secure never appears in the network list in CB2.,synthetic
+422,Minor point: there are no lockers for students who commute.,synthetic
+423,Minor point: material for CSC231 is split between Microsoft Teams and the LEB2 system.,synthetic
+424,Assignments in CSC231 come back with comments I can act on.,synthetic
+425,"Other faculties manage this better — here tutorials for INT202 are run by someone who has not seen the assignment. Separately, Credit where it is due: the cafeteria has far better options than last year.",synthetic
+426,"My main issue this term is that the internship is two months, which is too short to contribute anything.",synthetic
+427,"Not a complaint exactly, but the lighting in the second floor study area is too dim to read printed handouts. The other thing is Every term the same thing: every seat is taken by nine in the morning.",synthetic
+428,I raised this last semester and nothing has changed: the lighting in the common room is too dim to read printed handouts.,synthetic
+429,Please can someone look at this: the CSC122 midterm covered topics that were never taught.,synthetic
+430,Other faculties manage this better — here the CSC231 midterm covered topics that were never taught.,synthetic
+431,"Small thing, but announcements for international students are Thai-only.",synthetic
+432,Minor point: the placements on offer only cover a narrow set of roles.,synthetic
+433,No complaints here: the machines in the co-working space were upgraded and everything runs properly now.,synthetic
+434,"The library closes too early before exam week, though I understand the constraints. The other thing is Small thing, but the registration system goes down at lunchtime.",synthetic
+435,One thing that works well is that network coverage finally reaches every corner of LX10.,synthetic
+436,"No complaints here: the instructor for CSC102 explains the reasoning, not just the answer.",synthetic
+437,It is frustrating that the projector in the common room loses signal every ten minutes.,synthetic
+438,Minor point: sessions for CSC210 get cancelled with no replacement class.,synthetic
+439,"The wifi in Lab 1 drops every few minutes, which makes online quizzes a gamble.",synthetic
+440,"The lab machines take fifteen minutes just to log in, though I understand the constraints.",synthetic
+441,It would help a lot if the door to the co-working space has been broken since the start of term were not the case.,synthetic
+442,I raised this last semester and nothing has changed: the lab machines take fifteen minutes just to log in.,synthetic
+443,Everything for DSI201 now lands in one place on Google Classroom.,synthetic
+444,"Not a complaint exactly, but urgent messages to the office sit unread for days. The project in CSC122 connected theory to something real.",synthetic
+445,It would help a lot if career events are announced a week in advance were not the case.,synthetic
+446,"Please can someone look at this: project work only starts in year three, which is far too late. Minor point: the partner company list is much shorter than other faculties offer.",synthetic
+447,"Not a complaint exactly, but the door to the common room has been broken since the start of term. Separately, The wifi asks me to re-authenticate three or four times a day.",synthetic
+448,"Every term the same thing: translated material arrives after the event has happened. Separately, Small thing, but the assignment brief for CSC122 changed during submission week.",synthetic
+449,Please can someone look at this: office hours overlap exactly with our class timetable.,synthetic
+450,"Other faculties manage this better — here there is no way to search past announcements on Google Classroom. Separately, Material for DSI201 is split between the LEB2 system and LINE — which is how I submitted late twice.",synthetic
+451,The DSI201 final was twice as long as the time allowed.,synthetic
+452,There is no way to search past announcements on Microsoft Teams. This has been the case all term.,synthetic
+453,Other faculties manage this better — here the library closes too early on enrollment day.,synthetic
+454,It is frustrating that there are three copies of a set text for two hundred students.,synthetic
+455,"My main issue this term is that half the power outlets in the second floor study area are dead. Separately, The CV workshop was genuinely useful.",synthetic
+456,The CSC102 lecturer moves on before anyone has followed.,synthetic
+457,"The DSI201 midterm covered topics that were never taught, though I understand the constraints. Separately, Activity sign-ups assume everyone reads Thai.",synthetic
+458,"We are told to work it out ourselves whenever we ask for help, though I understand the constraints.",synthetic
+459,It is frustrating that the projector in Lab 1 loses signal every ten minutes.,synthetic
+460,"Internship dates clash with the exam period, though I understand the constraints. The other thing is No complaints here: assignments in INT202 come back with comments I can act on.",synthetic
+461,I raised this last semester and nothing has changed: every seat is taken by nine in the morning.,synthetic
+462,No complaints here: the library is quiet and well run.,synthetic
+463,Please can someone look at this: half the power outlets in the co-working space are dead.,synthetic
+464,"The air conditioning in CB1 is either off or freezing — which makes three-hour labs exhausting. Separately, Small thing, but the prayer room is used as a storage space.",synthetic
+465,"Small thing, but INT202 jumps to frameworks before covering the fundamentals. Separately, Every counter asks for a different set of forms — so I missed the scholarship deadline.",synthetic
+466,"Credit where it is due: there are finally enough printers for the whole floor. The other thing is Not a complaint exactly, but translated material arrives after the event has happened.",synthetic
+467,The machines in Lab 1 were upgraded and everything runs properly now.,synthetic
+468,"Every term the same thing: internship dates clash with the exam period. The other thing is Career events are announced a week in advance, so most of us find placements ourselves.",synthetic
+469,"Assignments in CSC122 come back with comments I can act on, and it makes a real difference.",synthetic
+470,One thing that works well is that the cafeteria has far better options than last year.,synthetic
+471,"Not a complaint exactly, but there is nowhere to eat on campus after six.",synthetic
+472,"Not a complaint exactly, but nobody explains how the internship grade is decided.",synthetic
+473,The marking scheme for CSC210 was never published. This has been the case all term.,synthetic
+474,There is no course that covers testing in any depth. This has been the case all term.,synthetic
+475,Grading in CSC122 is noticeably different between sections. This has been the case all term.,synthetic
+476,It is frustrating that the library closes too early in the afternoon.,synthetic
+477,Minor point: the lighting in the second floor study area is too dim to read printed handouts.,synthetic
+478,"Project work only starts in year three, which is far too late. The other thing is Credit where it is due: the library is quiet and well run.",synthetic
+479,I raised this last semester and nothing has changed: the printers near CB1 are out of ink more often than not.,synthetic
+480,"One thing that works well is that LX10 was refurbished and it is far more usable now. Separately, Other faculties manage this better — here there are no lockers for students who commute.",synthetic
+481,I raised this last semester and nothing has changed: whether I get help in English depends on who is at the counter.,synthetic
+482,"Not a complaint exactly, but the common room has not been cleaned properly in weeks.",synthetic
+483,Worth saying that nothing in the programme covers deployment or infrastructure.,synthetic
+484,The wifi in the co-working space drops every few minutes.,synthetic
+485,Please can someone look at this: sessions for CSC231 get cancelled with no replacement class. Other faculties manage this better — here nothing in the programme covers deployment or infrastructure.,synthetic
+486,The machines in LX10 were upgraded and everything runs properly now.,synthetic
+487,"Not a complaint exactly, but every counter asks for a different set of forms.",synthetic
+488,Please can someone look at this: uploads fail halfway through on the the LX building network.,synthetic
+489,the common room was refurbished and it is far more usable now.,synthetic
+490,Minor point: whether I get help in English depends on who is at the counter.,synthetic
+491,My main issue this term is that material for DSI201 is split between Google Classroom and Microsoft Teams.,synthetic
+492,"Small thing, but the desks in the second floor study area cannot hold a laptop and a notebook at once.",synthetic
+493,"Small thing, but the lunch queue takes twenty minutes in the afternoon.",synthetic
+494,"Small thing, but deadline changes reach us after the deadline.",synthetic
+495,"Not a complaint exactly, but internship dates clash with the exam period. Separately, Deadline changes reach us after the deadline, though I understand the constraints.",synthetic
+496,"Uploads fail halfway through on the S11 network, so I tether from my phone instead.",synthetic
+497,No complaints here: the career fair connected me to the company I now work for.,synthetic
+498,the second floor study area has not been cleaned properly in weeks.,synthetic
+499,No complaints here: everything for INT202 now lands in one place on Microsoft Teams. The other thing is It would help a lot if there are never enough monitors in LX10 for pair programming were not the case.,synthetic
+500,Other faculties manage this better — here the monitors in the second floor study area are too dim to use from more than a metre away.,synthetic
+501,Deadline changes reach us after the deadline — so missing one class means missing everything.,synthetic
+502,The printing service in the library is cash only. This has been the case all term.,synthetic
+503,"It would help a lot if group study rooms cannot be booked online were not the case. Separately, The monitors in Lab 1 are too dim to use from more than a metre away, so three of us share one screen.",synthetic
+504,"Small thing, but nobody can tell me which office my form is sitting in.",synthetic
+505,"Minor point: the internship is two months, which is too short to contribute anything.",synthetic
+506,The lecturer for CSC102 gives higher marks to students who pay for his private tutoring.,synthetic
+507,The partner company list is much shorter than other faculties offer — so most of us find placements ourselves.,synthetic
+508,Worth saying that the monitors in the co-working space are too dim to use from more than a metre away.,synthetic
+509,Credit where it is due: the career fair connected me to the company I now work for.,synthetic
+510,My main issue this term is that the projector in the second floor study area loses signal every ten minutes.,synthetic
+511,Every term the same thing: the wifi asks me to re-authenticate three or four times a day.,synthetic
+512,"No complaints here: the instructor for INT202 explains the reasoning, not just the answer.",synthetic
+513,Every term the same thing: a single request needs three signatures from three offices.,synthetic
+514,No complaints here: the career fair connected me to the company I now work for. The other thing is It would help a lot if internship dates clash with the exam period were not the case.,synthetic
+515,The project in CSC102 connected theory to something real.,synthetic
+516,"Changes are announced early enough to plan around, and it makes a real difference.",synthetic
+517,"I get logged out of the campus wifi every time I move between rooms. Separately, Other faculties manage this better — here I get logged out of the campus wifi every time I move between rooms.",synthetic
+518,"Activity sign-ups assume everyone reads Thai, though I understand the constraints.",synthetic
+519,The cafeteria closes before evening classes finish — so people skip meals before evening labs.,synthetic
+520,A lecturer discussed a student's medical record in front of the whole class.,synthetic
+521,"There is no course that covers testing in any depth, though I understand the constraints.",synthetic
+522,"Small thing, but the lab machines in LX10 cannot run Docker for DSI201. Separately, No complaints here: the new online form removed most of the paperwork.",synthetic
+523,"Not a complaint exactly, but translated material arrives after the event has happened.",synthetic
+524,Minor point: career events are announced a week in advance.,synthetic
+525,"The CV workshop was genuinely useful, and it makes a real difference.",synthetic
+526,There is no course that covers testing in any depth — so the first assignment is a wall.,synthetic
+527,"The cafeteria has far better options than last year. Separately, Every seat is taken by nine in the morning, though I understand the constraints.",synthetic
+528,Credit where it is due: the library is quiet and well run.,synthetic
+529,"Small thing, but the prayer room is used as a storage space.",synthetic
+530,Other faculties manage this better — here the wifi asks me to re-authenticate three or four times a day.,synthetic
+531,Worth saying that INT202 jumps to frameworks before covering the fundamentals.,synthetic
+532,My main issue this term is that the elective list has not changed in three years.,synthetic
+533,Minor point: course announcements only go out on Microsoft Teams and disappear in the scroll.,synthetic
+534,"Small thing, but the wifi asks me to re-authenticate three or four times a day.",synthetic
+535,Nothing in the programme covers deployment or infrastructure — so the first assignment is a wall.,synthetic
+536,The library is quiet and well run.,synthetic
+537,"Nobody can tell me which office my form is sitting in, though I understand the constraints.",synthetic
+538,"Career events are announced a week in advance. Separately, It would help a lot if the connection in CB2312 dies as soon as a full class joins were not the case.",synthetic
+539,It is frustrating that schedule changes are announced verbally in class and nowhere else.,synthetic
+540,Every term the same thing: material for CSC102 is split between LINE and the LEB2 system.,synthetic
+541,The cafeteria has far better options than last year.,synthetic
+542,One thing that works well is that food on campus is cheap and quick.,synthetic
+543,I raised this last semester and nothing has changed: half the power outlets in the common room are dead.,synthetic
+544,"Orientation covered nothing about visas or residence registration, though I understand the constraints.",synthetic
+545,"The CSC210 lecturer moves on before anyone has followed, so I learn the material from YouTube.",synthetic
+546,"Not a complaint exactly, but every seat is taken by nine in the morning. The other thing is No complaints here: the career fair connected me to the company I now work for.",synthetic
+547,"Document approval takes weeks with no status update, though I understand the constraints.",synthetic
+548,"Group study rooms cannot be booked online, which pushes everyone to cafes off campus.",synthetic
+549,I raised this last semester and nothing has changed: LNG103 repeats most of what we already did in LNG103.,synthetic
+550,"The library is quiet and well run, and it makes a real difference.",synthetic
+551,I raised this last semester and nothing has changed: the lunch queue takes twenty minutes on enrollment day.,synthetic
+552,"The lab machines in CB2306 cannot run Docker for CSC231, though I understand the constraints.",synthetic
+553,One thing that works well is that the machines in the co-working space were upgraded and everything runs properly now. Minor point: career events are announced a week in advance.,synthetic
+554,Assignments in DSI201 come back with comments I can act on.,synthetic
+555,Every term the same thing: sessions for CSC210 get cancelled with no replacement class.,synthetic
+556,"Small thing, but the assignment brief for INT202 changed during submission week. Orientation covered nothing about visas or residence registration. This has been the case all term.",synthetic
+557,My main issue this term is that I get logged out of the campus wifi every time I move between rooms.,synthetic
+558,"My request was processed within a day this term, and it makes a real difference. The other thing is Please can someone look at this: the prayer room is used as a storage space.",synthetic
+559,"Not a complaint exactly, but sessions for LNG103 get cancelled with no replacement class.",synthetic
+560,It would help a lot if the CSC102 final was twice as long as the time allowed were not the case.,synthetic
+561,"The LNG103 midterm covered topics that were never taught — and appeals go nowhere. Separately, My main issue this term is that the CSC231 lecturer moves on before anyone has followed.",synthetic
+562,"The desks in CB2306 cannot hold a laptop and a notebook at once, which makes three-hour labs exhausting.",synthetic
+563,"Marking in CSC210 was fair and matched what we studied, and it makes a real difference.",synthetic
+564,It is frustrating that the prayer room is used as a storage space. The other thing is My main issue this term is that translated material arrives after the event has happened.,synthetic
+565,Course announcements only go out on LINE and disappear in the scroll.,synthetic
+566,It would help a lot if the desks in Lab 1 cannot hold a laptop and a notebook at once were not the case.,synthetic
+567,Worth saying that the lab machines in the common room cannot run Docker for INT202. One thing that works well is that my request was processed within a day this term.,synthetic
+568,"Every term the same thing: the lecturer for LNG103 reads the slides without explaining any reasoning. Separately, Worth saying that project work only starts in year three, which is far too late.",synthetic
+569,No complaints here: assignments in CSC210 come back with comments I can act on. The other thing is Document approval takes weeks with no status update. This has been the case all term.,synthetic
+570,My main issue this term is that the answer to the same question changes depending on who asks.,synthetic
+571,Minor point: half the power outlets in the co-working space are dead.,synthetic
+572,Minor point: the lecturer for LNG103 reads the slides without explaining any reasoning.,synthetic
+573,No complaints here: the second floor study area was refurbished and it is far more usable now. The other thing is No complaints here: CB2 is kept clean and the rooms are comfortable.,synthetic
+574,Minor point: the wifi in the common room drops every few minutes.,synthetic
+575,Worth saying that the wifi in CB2306 drops every few minutes.,synthetic
+576,"The project in DSI201 connected theory to something real, and it makes a real difference. Office hours overlap exactly with our class timetable — and I had to take a day off to chase it.",synthetic
+577,One thing that works well is that my request was processed within a day this term.,synthetic
+578,I raised this last semester and nothing has changed: the answer to the same question changes depending on who asks.,synthetic
+579,Other faculties manage this better — here the lunch queue takes twenty minutes at the start of term.,synthetic
+580,"Course announcements only go out on Google Classroom and disappear in the scroll. Separately, Credit where it is due: everything for CSC122 now lands in one place on Microsoft Teams.",synthetic
+581,It would help a lot if nothing in the programme covers deployment or infrastructure were not the case.,synthetic
+582,Material for CSC210 is split between email and Microsoft Teams. The other thing is My main issue this term is that activity sign-ups assume everyone reads Thai.,synthetic
+583,"Every term the same thing: project work only starts in year three, which is far too late.",synthetic
+584,Announcements for international students are Thai-only. This has been the case all term. The other thing is Credit where it is due: the machines in Lab 1 were upgraded and everything runs properly now.,synthetic
+585,"The lecturer for CSC231 reads the slides without explaining any reasoning — which is why attendance keeps dropping. The other thing is Small thing, but I get logged out of the campus wifi every time I move between rooms.",synthetic
+586,Tutorials for INT202 are run by someone who has not seen the assignment.,synthetic
+587,"Small thing, but course announcements only go out on Microsoft Teams and disappear in the scroll.",synthetic
+588,It is frustrating that the printers near S11 are out of ink more often than not.,synthetic
+589,It is frustrating that group study rooms cannot be booked online.,synthetic
+590,Credit where it is due: the CSC231 demonstrator stays behind until everyone understands.,synthetic
+591,"Not a complaint exactly, but schedule changes are announced verbally in class and nowhere else.",synthetic
+592,Please can someone look at this: the assignment brief for INT202 changed during submission week.,synthetic
+593,Please can someone look at this: there are never enough monitors in Lab 1 for pair programming.,synthetic
+594,Schedule changes are announced verbally in class and nowhere else — which is how I submitted late twice.,synthetic
+595,"Not a complaint exactly, but scholarship conditions exclude anyone who works part time.",synthetic
+596,I raised this last semester and nothing has changed: the library closes too early before exam week.,synthetic
+597,"There are finally enough printers for the whole floor, and it makes a real difference.",synthetic
+598,My main issue this term is that the chairs in the second floor study area are painful to sit on for a full session.,synthetic
+599,Minor point: material for CSC102 is split between email and email.,synthetic
+600,Credit where it is due: the new online form removed most of the paperwork.,synthetic
+601,"No complaints here: assignments in CSC102 come back with comments I can act on. Separately, The lab machines take fifteen minutes just to log in — which eats half the lab session.",synthetic
+602,"It would help a lot if we get a numeric grade with no comments at all were not the case. Small thing, but the lab machines in CB2312 cannot run Docker for CSC231.",synthetic
+603,"Small thing, but the internship is two months, which is too short to contribute anything.",synthetic
+604,Other faculties manage this better — here international students hear about events from friends rather than the faculty.,synthetic
+605,"Small thing, but the lunch queue takes twenty minutes during lab sessions.",synthetic
+606,The marking scheme for INT202 was never published.,synthetic
+607,I raised this last semester and nothing has changed: nobody explains how the internship grade is decided.,synthetic
+608,Please can someone look at this: the printing service in the library is cash only. The CV workshop was genuinely useful.,synthetic
+609,Worth saying that the door to CB2306 has been broken since the start of term.,synthetic
+610,It is frustrating that announcements for international students are Thai-only.,synthetic
+611,Please can someone look at this: we are told to work it out ourselves whenever we ask for help. Please can someone look at this: the lab machines in CB2306 cannot run Docker for CSC231.,synthetic
+612,No complaints here: the project in CSC102 connected theory to something real.,synthetic
+613,"Office hours overlap exactly with our class timetable, and I had to take a day off to chase it.",synthetic
+614,"The cafeteria has far better options than last year, and it makes a real difference.",synthetic
+615,"The instructor for CSC122 explains the reasoning, not just the answer.",synthetic
+616,A TA shared the LNG103 answer key with his own friends before the exam.,synthetic
+617,Other faculties manage this better — here the lab machines in the co-working space cannot run Docker for INT202.,synthetic
+618,It would help a lot if the marking scheme for CSC231 was never published were not the case.,synthetic
+619,I raised this last semester and nothing has changed: the door to CB2306 has been broken since the start of term. The lab machines in Lab 1 cannot run Docker for LNG103. This has been the case all term.,synthetic
+620,"Not a complaint exactly, but the CSC210 final was twice as long as the time allowed.",synthetic
+621,Urgent messages to the office sit unread for days. This has been the case all term.,synthetic
+622,Please can someone look at this: the CSC102 midterm covered topics that were never taught.,synthetic
+623,My main issue this term is that the monitors in LX10 are too dim to use from more than a metre away.,synthetic
+624,"Every term the same thing: translated material arrives after the event has happened. Separately, The CSC231 demonstrator stays behind until everyone understands, and it makes a real difference.",synthetic
+625,"The LNG103 midterm covered topics that were never taught, and appeals go nowhere.",synthetic
+626,Credit where it is due: my request was processed within a day this term. The other thing is Other faculties manage this better — here the wifi asks me to re-authenticate three or four times a day.,synthetic
+627,A single request needs three signatures from three offices — and I had to take a day off to chase it. The other thing is Every term the same thing: there are never enough monitors in CB2312 for pair programming.,synthetic
+628,One thing that works well is that there are finally enough printers for the whole floor.,synthetic
+629,The printers near CB2 are out of ink more often than not. This has been the case all term.,synthetic
+630,Announcements for international students are Thai-only. This has been the case all term.,synthetic
+631,Minor point: SIT-Secure never appears in the network list in the SIT building. The other thing is It is frustrating that nothing in the programme covers deployment or infrastructure.,synthetic
+632,No complaints here: my request was processed within a day this term.,synthetic
+633,"Small thing, but there are no lockers for students who commute.",synthetic
+634,Every term the same thing: internship dates clash with the exam period.,synthetic
+635,"Small thing, but the partner company list is much shorter than other faculties offer.",synthetic
+636,It would help a lot if the registration system goes down at the start of term were not the case. The other thing is Other faculties manage this better — here the CSC231 final was twice as long as the time allowed.,synthetic
