@@ -1,0 +1,41 @@
+[project]
+name = "gnp-ai"
+version = "0.1.0"
+description = "OpenGNP AI pipeline: decomposition, embedding, sentiment, topic clustering"
+readme = "docs/pipeline.md"
+
+# numba (pulled in by umap-learn, which BERTopic needs) supports <3.14 only.
+# Installing into a 3.14 environment fails while building numba from source,
+# so the ceiling is declared here rather than discovered at install time.
+requires-python = ">=3.10,<3.14"
+
+# Versions are pinned because they change clustering output: a different
+# sentence-transformers or scikit-learn silently moves the topics, which would
+# invalidate the measurements in data/reports/. torch is left to resolve so CPU
+# and GPU hosts can each pick a working wheel.
+dependencies = [
+    "psycopg[binary]==3.3.5",
+    "pgvector==0.5.0",
+    "python-dotenv==1.1.0",
+    "httpx==0.28.1",
+    "numpy==2.3.5",
+    "pandas==2.3.3",
+    "scikit-learn==1.7.2",
+    "sentence-transformers==6.0.0",
+    "transformers==5.4.0",
+    "bertopic==0.17.4",
+    "hdbscan==0.8.44",
+    "umap-learn==0.5.12",
+]
+
+[project.optional-dependencies]
+# Only scripts/build_dataset.py needs these: it reads the gold decomposition
+# from feedback_expanded_with_gemini.xlsx.
+experiments = ["openpyxl==3.1.5"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pipeline", "scripts"]
