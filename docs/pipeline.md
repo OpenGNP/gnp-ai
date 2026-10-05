@@ -26,7 +26,6 @@ answers ──► decompose ──► embed ──► sentiment ──► points
 | Violation / toxicity | `unitary/toxic-bert` |
 | Embedding | `all-MiniLM-L6-v2` (384d) |
 | Clustering | BERTopic + HDBSCAN |
-| Priority | pure formula, computed at read time (see below) |
 
 Decomposition is one local-LLM call per answer and dominates runtime. The two
 classifiers are small CPU models and run batched over the whole pass. After
@@ -96,38 +95,6 @@ reports in `data/reports/`. One implementation, two entry points.
 Defaults reproduce the tuned run at n=145 (`mcs=4`, `split-large=13`,
 outlier threshold `0.30`), expressed as percentages of corpus size so they still
 hold as the corpus grows. Override any of them in `.env`.
-
-## Priority is not stored
-
-Priority is a pure function of counts the database already holds, so the
-pipeline does not compute or store it — whatever renders the dashboard computes
-it from `topic_trends`. That keeps it in sync with the counts automatically and
-needs no schema change.
-
-The formula, per topic, over its most recent trend row:
-
-```
-reach     = feedback_count / max(feedback_count across topics)   # 0..1, relative
-negative  = negative_count / feedback_count                      # 0..1
-severity  = severe_count   / feedback_count                      # 0..1
-
-priority  = 0.4 * reach + 0.4 * negative + 0.2 * severity
-```
-
-The weights are a judgement call, not a measurement — state them as such. Reach
-is normalised against the largest topic rather than the corpus so a single
-dominant topic cannot flatten everything else to near zero.
-
-Reference SQL, so server and client cannot drift apart:
-
-```sql
-SELECT t.canonical_topic_id,
-       0.4 * t.feedback_count::real / MAX(t.feedback_count) OVER ()
-     + 0.4 * t.negative_count::real / NULLIF(t.feedback_count, 0)
-     + 0.2 * t.severe_count::real   / NULLIF(t.feedback_count, 0) AS priority
-FROM topic_trends t
-ORDER BY priority DESC;
-```
 
 ## What is_severe actually means
 

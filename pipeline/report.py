@@ -7,7 +7,6 @@ Every stage persists its output, so nothing needs re-running to analyse it:
     violation   points.is_severe
     embedding   points.embedding (reported as dimensions, not dumped)
     clustering  points.canonical_topic_id + assignment_confidence
-    priority    computed here from topic_trends, since it is not stored
 
 Writes a readable report to data/reports/ (same convention as the experiment
 scripts) and a flat CSV for spreadsheet or pandas analysis.
@@ -47,7 +46,7 @@ POINTS_SQL = """
     ORDER BY p.answer_id, p.id
 """
 
-# Latest trend row per topic — the inputs to the priority formula.
+# Latest trend row per topic — the per-period counts behind each topic.
 TRENDS_SQL = """
     SELECT DISTINCT ON (t.canonical_topic_id)
            t.canonical_topic_id AS topic_id,
@@ -69,29 +68,14 @@ def _frame(conn: psycopg.Connection, sql: str, params=None) -> pd.DataFrame:
         return pd.DataFrame(cur.fetchall(), columns=columns)
 
 
-def priority(trends: pd.DataFrame) -> pd.DataFrame:
-    """0.4*reach + 0.4*negative + 0.2*severity — see docs/pipeline.md.
-
-    Reach is relative to the largest topic so one dominant topic cannot flatten
-    the rest; the other two are shares of the topic's own volume.
-    """
-    if trends.empty:
-        return trends
-
-    out = trends.copy()
-    biggest = out.feedback_count.max() or 1
-    volume = out.feedback_count.replace(0, pd.NA)
-
-    out["reach"] = out.feedback_count / biggest
-    out["negative_ratio"] = (out.negative_count / volume).fillna(0.0)
-    out["severity_ratio"] = (out.severe_count / volume).fillna(0.0)
-    out["priority"] = 0.4 * out.reach + 0.4 * out.negative_ratio + 0.2 * out.severity_ratio
-    return out.sort_values("priority", ascending=False)
+def rank(trends: pd.DataFrame) -> pd.DataFrame:
+    """Biggest topics first. Ranking for the dashboard is the frontend's job."""
+    return trends if trends.empty else trends.sort_values("feedback_count", ascending=False)
 
 
 def build(conn: psycopg.Connection, pipeline_tag: str, *, examples: int = 3) -> tuple[str, pd.DataFrame]:
     points = _frame(conn, POINTS_SQL)
-    trends = priority(_frame(conn, TRENDS_SQL, (pipeline_tag,)))
+    trends = rank(_frame(conn, TRENDS_SQL, (pipeline_tag,)))
 
     lines: list[str] = []
     add = lines.append
@@ -130,19 +114,18 @@ def build(conn: psycopg.Connection, pipeline_tag: str, *, examples: int = 3) -> 
             flag = " [FLAGGED]" if row.is_severe else ""
             add(f"   - [{row.sentiment_label or 'NULL':8s}]{flag} {row.point_text}")
 
-    # ── clustering + priority ──
+    # ── clustering ──
     add("")
     add("-" * 78)
-    add("TOPICS — ranked by priority (0.4*reach + 0.4*negative + 0.2*severity)")
+    add("TOPICS — largest first")
     add("-" * 78)
     for row in trends.itertuples():
         add("")
-        add(f"[{row.priority:.3f}] {row.topic_name}   ({row.feedback_count} points)")
+        add(f"{row.topic_name}   ({row.feedback_count} points)")
         add(f"  keywords: {row.keywords}")
         add(
-            f"  reach {row.reach:.2f} · negative {row.negative_ratio:.2f} "
-            f"· severity {row.severity_ratio:.2f}"
-            f"  (+{row.positive_count}/~{row.neutral_count}/-{row.negative_count})"
+            f"  +{row.positive_count} / ~{row.neutral_count} / -{row.negative_count}"
+            f"   severe {row.severe_count}"
         )
         members = points[points.topic_id == row.topic_id].nlargest(
             examples, "assignment_confidence"
