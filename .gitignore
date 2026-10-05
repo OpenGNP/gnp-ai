@@ -30,3 +30,11 @@ data/finetune_results_fold*.csv
 data/cluster_report.txt
 data/cluster_report*.txt
 data/pipeline_points.csv
+
+# Node — leftover from the abandoned jev / Vercel AI Gateway spike
+node_modules/
+package-lock.json
+
+# ผลการทดลอง decompose แต่ละ variant (สร้างใหม่ได้ด้วย scripts/decompose_ollama.py)
+data/decomposed_*.csv
+data/decompose_ollama_results.csv
