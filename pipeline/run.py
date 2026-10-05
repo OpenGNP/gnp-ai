@@ -28,7 +28,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 from . import cluster as cluster_mod
-from . import config, db, decompose, embed, llm, report, sentiment, violation
+from . import config, db, decompose, embed, identity, llm, naming, report, sentiment, violation
 
 
 def _log(message: str) -> None:
@@ -57,10 +57,10 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
             staged.extend((answer_id, point) for point in points)
             _log(f"  [{n}/{len(pending)}] answer {answer_id} -> {len(points)} point(s) [{status}]")
 
-    texts = [text for _, text in staged]
-    vectors = embed.encode(texts)
-    labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
-    severities = [None] * len(texts) if skip_sentiment else violation.flag(texts)
+        texts = [text for _, text in staged]
+        vectors = embed.encode(texts, db.embedding_dims(conn))
+        labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
+        severities = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
 
     rows = [
         {
@@ -80,10 +80,10 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
     return len(rows)
 
 
-def backfill(conn, *, dry_run: bool, skip_sentiment: bool) -> int:
+def backfill(conn, *, dry_run: bool, skip_sentiment: bool, form_ids: list[int] | None = None) -> int:
     """Give pre-existing points (the seeded ones) an embedding so they join the
     corpus. Their topic assignment will then be replaced by pipeline topics."""
-    missing = db.points_missing_features(conn)
+    missing = db.points_missing_features(conn, form_ids)
     if not missing:
         _log("backfill: every point already has an embedding")
         return 0
@@ -94,10 +94,10 @@ def backfill(conn, *, dry_run: bool, skip_sentiment: bool) -> int:
         return 0
 
     texts = [text for _, text in missing]
-    vectors = embed.encode(texts)
+    vectors = embed.encode(texts, db.embedding_dims(conn))
 
     labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
-    severities = [None] * len(texts) if skip_sentiment else violation.flag(texts)
+    severities = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
 
     rows = [
         {
@@ -116,10 +116,10 @@ def backfill(conn, *, dry_run: bool, skip_sentiment: bool) -> int:
     return len(rows)
 
 
-def relabel(conn, *, dry_run: bool) -> int:
+def relabel(conn, *, dry_run: bool, form_ids: list[int] | None = None) -> int:
     """Re-run the classifiers over points the pipeline owns. Needed whenever
     SENTIMENT_MODEL, VIOLATION_MODEL or VIOLATION_THRESHOLD changes."""
-    targets = db.points_for_relabel(conn)
+    targets = db.points_for_relabel(conn, form_ids)
     if not targets:
         _log("relabel: no pipeline-owned points")
         return 0
@@ -131,7 +131,7 @@ def relabel(conn, *, dry_run: bool) -> int:
 
     texts = [text for _, text in targets]
     labels = sentiment.classify(texts)
-    severities = violation.flag(texts)
+    severities = violation.flag_zeroshot(texts)
 
     rows = [
         {"id": point_id, "sentiment_label": label, "is_severe": severe}
@@ -146,7 +146,7 @@ def relabel(conn, *, dry_run: bool) -> int:
 
 # ── stage: cluster ─────────────────────────────────────────────────────
 
-def recluster(conn, *, dry_run: bool) -> int:
+def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
     started = datetime.now(timezone.utc)
     points = db.clusterable_points(conn)
     _log(f"cluster: {len(points)} embedded point(s) in scope")
@@ -160,28 +160,73 @@ def recluster(conn, *, dry_run: bool) -> int:
     for topic in result.topics:
         _log(f"  {topic.name}  ({topic.counts['total']} points)")
 
-    stale = db.pipeline_topic_ids(conn)
+    # Which of these groups are topics we already know? Resolved from membership
+    # before anything is written, because the first write would overwrite the
+    # very assignments the answer depends on.
+    known = db.pipeline_topics(conn)
+    plan = identity.resolve(points, result, known)
+    counts = plan.summary()
+    _log(
+        f"identity: carried {counts['carried']} · new {counts['new']} · "
+        f"split {counts['split']} · merged {counts['merged']} · gone {counts['gone']}"
+    )
+    for event in plan.events[:12]:
+        _log(f"  {event}")
+
+    # Only brand-new topics are named: a carried topic keeps the title the
+    # dashboard already shows, and re-naming it every run would churn the labels
+    # for an issue that has not changed.
+    titles: dict[str, tuple[str | None, str | None]] = {}
+    unnamed = [t for t in result.topics if t.key not in plan.reuse]
+    if name_topics and not dry_run and unnamed:
+        _log(f"naming: asking {config.DECOMPOSE_MODEL} to title {len(unnamed)} new topic(s)")
+        with llm.client() as http:
+            for topic in unnamed:
+                title, summary = naming.name_topic(http, topic.keywords, topic.member_texts)
+                titles[topic.key] = (title, summary)
+                if title:
+                    _log(f"  {topic.name}  ->  {title}")
+
     if dry_run:
-        _log(f"cluster: dry run — would replace {len(stale)} pipeline topic(s), nothing written")
+        _log(
+            f"cluster: dry run — would carry {counts['carried']} topic(s), "
+            f"add {counts['new']}, drop {counts['gone']}; nothing written"
+        )
         return 0
 
     with conn.transaction():
-        # Only topics a previous pipeline run created. Seeded topics carry no
-        # PIPELINE_TAG marker and survive untouched.
-        removed = db.delete_topics(conn, stale)
+        # Only the topics nothing claimed this run are removed. Seeded topics
+        # carry no PIPELINE_TAG marker and are never in `gone` to begin with.
+        removed = db.delete_topics(conn, plan.gone)
+        db.mark_topics_merged(conn, list(plan.merged))
 
         assignments: list[dict] = []
         for topic in result.topics:
-            topic_id = db.insert_topic(
-                conn,
-                name=topic.name,
-                summary=None,  # auto-generated summaries are still an open decision
-                keywords=topic.keywords,
-                centroid=topic.centroid,
-                size=topic.counts["total"],
-                first_seen=topic.first_seen,
-                last_seen=topic.last_seen,
-            )
+            carried = plan.reuse.get(topic.key)
+            if carried is not None:
+                topic_id = carried
+                db.update_topic(
+                    conn,
+                    topic_id,
+                    name=known[topic_id],
+                    summary=None,
+                    keywords=topic.keywords,
+                    centroid=topic.centroid,
+                    size=topic.counts["total"],
+                    last_seen=topic.last_seen,
+                )
+            else:
+                title, summary = titles.get(topic.key, (None, None))
+                topic_id = db.insert_topic(
+                    conn,
+                    name=title or topic.name,
+                    summary=summary,
+                    keywords=topic.keywords,
+                    centroid=topic.centroid,
+                    size=topic.counts["total"],
+                    first_seen=topic.first_seen,
+                    last_seen=topic.last_seen,
+                )
             db.insert_trend(
                 conn,
                 topic_id=topic_id,
@@ -225,6 +270,13 @@ def recluster(conn, *, dry_run: bool) -> int:
         db.record_run(
             conn,
             parameters=json.dumps({
+                "identity": counts,
+                "carry_min": config.TOPIC_CARRY_MIN,
+                "containment": {
+                    str(plan.reuse[k]): round(max(v.values()), 3)
+                    for k, v in plan.containment.items()
+                    if k in plan.reuse and v
+                },
                 "min_cluster_size": result.min_cluster_size,
                 "split_large": result.split_large,
                 "outlier_threshold": config.OUTLIER_THRESHOLD,
@@ -235,7 +287,10 @@ def recluster(conn, *, dry_run: bool) -> int:
             completed_at=datetime.now(timezone.utc),
         )
 
-    _log(f"cluster: replaced {removed} old topic(s), wrote {len(result.topics)} new")
+    _log(
+        f"cluster: carried {counts['carried']} topic(s), added {counts['new']}, "
+        f"dropped {removed}"
+    )
     return len(result.topics)
 
 
@@ -251,10 +306,10 @@ def pass_once(conn, args) -> None:
         return
 
     if args.relabel:
-        relabel(conn, dry_run=args.dry_run)
+        relabel(conn, dry_run=args.dry_run, form_ids=args.form)
 
     if args.backfill:
-        backfill(conn, dry_run=args.dry_run, skip_sentiment=args.skip_sentiment)
+        backfill(conn, dry_run=args.dry_run, skip_sentiment=args.skip_sentiment, form_ids=args.form)
 
     new_points = 0
     if not args.cluster_only:
@@ -268,7 +323,7 @@ def pass_once(conn, args) -> None:
         _log("cluster: skipped, no new points this pass")
         return
 
-    recluster(conn, dry_run=args.dry_run)
+    recluster(conn, dry_run=args.dry_run, name_topics=not args.no_name_topics)
 
 
 def main() -> None:
@@ -281,12 +336,17 @@ def main() -> None:
     ap.add_argument("--backfill", action="store_true",
                     help="embed points that have none (the seeded rows) so they join the corpus; "
                          "their topic assignment is then replaced by pipeline topics")
+    ap.add_argument("--no-name-topics", action="store_true",
+                    help="skip LLM topic naming; keep the raw c-TF-IDF keyword names")
     ap.add_argument("--report", action="store_true",
                     help="print what every stage produced, save it to data/reports/ "
                          "and dump data/pipeline_points.csv; writes nothing to the database")
     ap.add_argument("--relabel", action="store_true",
                     help="re-run the sentiment and violation classifiers over existing "
                          "pipeline-owned points (after changing either model)")
+    ap.add_argument("--form", type=int, nargs="+", metavar="ID", default=None,
+                    help="restrict --backfill and --relabel to these form ids "
+                         "(clustering always spans every embedded point)")
     ap.add_argument("--limit", type=int, metavar="N", help="ingest at most N answers this pass")
     ap.add_argument("--skip-sentiment", action="store_true",
                     help="skip the sentiment and violation classifiers, leaving those columns NULL")
