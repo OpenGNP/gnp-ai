@@ -1,0 +1,43 @@
+expected,text
+legal,"A lecturer asked me for 5,000 baht in exchange for a passing grade in CSC102."
+legal,My laptop was stolen from the CB2 common room and the office refused to check the CCTV.
+legal,A senior student threatened to hit me after I reported him to the department.
+legal,Someone was selling the midterm exam paper in a LINE group before the exam.
+legal,A staff member used the department budget to buy personal equipment for his home.
+legal,The lab supervisor made international students work unpaid overtime and hinted our visas depend on it.
+legal,A lecturer took photos of students in class without consent and posted them on his public page.
+ethics,The professor gives higher marks to students who pay for his private tutoring sessions.
+ethics,My advisor put his own name as first author on work I did entirely myself.
+ethics,A TA shared the answer key with his own friends the night before the exam.
+ethics,One lecturer inflates scores so the same course gives completely different grades by section.
+ethics,A lecturer told the whole class about a student's mental health record.
+ethics,The scholarship recipient was decided before the interviews were even held.
+ethics,"After I filed a complaint about the course, the same staff member started marking me down."
+ethics,A professor pressured us to work at his startup as unpaid interns in exchange for credit.
+ethics,Students in my section copied the whole assignment and the TA ignored it when told.
+moral,The advisor humiliated a student in front of the class for not affording the field trip.
+moral,A lecturer mocked a student's accent every session until that student stopped attending.
+moral,Staff keep calling an international student 'the foreigner' instead of using their name.
+moral,A professor told a female student that engineering is not a field for women.
+moral,Senior students force juniors to do their assignments and call it tradition.
+moral,A lecturer read out the failing students' grades out loud to shame them.
+none,The wifi in CB2 keeps disconnecting during lab sessions.
+none,This course is a complete waste of time and the lecturer is useless.
+none,Cafeteria queues at lunch are far too long for evening students.
+none,The curriculum is outdated and does not cover Docker or Kubernetes.
+none,Assignments are announced on LINE which makes them impossible to find later.
+none,The air conditioning in the LX building is broken again.
+none,The exam was unfair because it covered material we never studied in class.
+none,Nobody from the office answers the phone during enrollment week.
+none,The workload in year 2 is crushing and I barely sleep.
+none,I pay a lot of tuition and the lab computers are still too slow to run Docker.
+none,An instructor cancelled classes several times without notice or a make-up session.
+none,Group members removed my name from the project submission after an argument.
+none,The CSC231 lecturer moves on before anyone has followed
+none,The lecturer for DSI201 reads the slides without explaining any reasoning.
+none,The chairs in Lab 1 are painful to sit on for a full session.
+none,This issue eats half the lab session
+none,Nobody explains how the internship grade is decided
+none,I raised an issue last semester about three copies of a set text for two hundred students
+none,Sessions for CSC102 get cancelled with no replacement class
+none,The lab machines in the common room cannot run Docker for CSC210
