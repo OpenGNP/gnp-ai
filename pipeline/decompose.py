@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import httpx
 
-from scripts.decompose_ollama import SYSTEM_PROMPT, build_prompt, parse_points
+from scripts.decompose_ollama import SYSTEM_PROMPT, build_prompt, parse_output
 
 from . import config, llm
 
@@ -19,7 +19,7 @@ def decompose(http: httpx.Client, text: str) -> tuple[list[str], str]:
     a single point — losing a respondent's feedback is worse than a coarse split."""
     prompt = build_prompt(config.DECOMPOSE_PROMPT, text)
     raw, _ = llm.chat(http, SYSTEM_PROMPT, prompt)
-    points, status = parse_points(raw)
+    points, status = parse_output(config.DECOMPOSE_PROMPT, raw)
 
     if not points:
         return [text.strip()], "decompose_failed"

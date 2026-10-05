@@ -32,6 +32,7 @@ class TopicDraft:
     keywords: str
     centroid: np.ndarray
     members: list[tuple[int, float]] = field(default_factory=list)
+    member_texts: list[str] = field(default_factory=list)
     first_seen: datetime | None = None
     last_seen: datetime | None = None
     counts: dict[str, int] = field(default_factory=dict)
@@ -113,6 +114,9 @@ def cluster(points: list[ClusterablePoint]) -> ClusterResult:
                 keywords=", ".join(words[:10]),
                 centroid=centroid.astype(np.float32),
                 members=[(points[i].id, float(c)) for i, c in zip(idx, confidences)],
+                # ordered by confidence so the namer reads the most typical points first
+                member_texts=[points[i].text for i in 
+                              [idx[j] for j in confidences.argsort()[::-1]]],
                 first_seen=min(created),
                 last_seen=max(created),
                 counts=_counts(members),
