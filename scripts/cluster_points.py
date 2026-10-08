@@ -262,13 +262,24 @@ def top_words(docs: list[str], k: int = 5) -> list[str]:
     return [vocab[i] for i in order]
 
 
-def split_large_topics(model, points: pd.DataFrame, embeddings: np.ndarray, min_size: int):
+def split_large_topics(
+    model, points: pd.DataFrame, embeddings: np.ndarray, min_cluster_size: int
+):
     """จับกลุ่มซ้ำเฉพาะข้างในกลุ่มที่ใหญ่เกินไป เพื่อดึงรายละเอียดย่อยออกมา
 
     กลุ่มอย่าง "courses, curriculum" ใช้คำคล้ายกันจนรวมประเด็นย่อยที่ต่างกันจริง
     ไว้ด้วยกัน (ความเร็วสอน, เนื้อหาตกยุค, อยากได้ lab จริง ฯลฯ) การจับกลุ่มซ้ำ
-    เฉพาะสมาชิกกลุ่มนั้นด้วย min_cluster_size เล็กลง จะดึงรายละเอียดที่ถูกกลืน
-    ไว้ออกมาโดยไม่กระทบกลุ่มอื่นที่แยกดีอยู่แล้ว
+    เฉพาะสมาชิกกลุ่มนั้น จะดึงรายละเอียดที่ถูกกลืนไว้ออกมาโดยไม่กระทบกลุ่มอื่น
+    ที่แยกดีอยู่แล้ว
+
+    min_cluster_size คือเกณฑ์เดียวกับที่ใช้จับกลุ่มรอบแรก ไม่ใช่เลขแยก —
+    "ก้อนย่อยต้องใหญ่พอจะเป็น topic ได้เหมือนก้อนอื่น" เกณฑ์ว่ากลุ่มไหนใหญ่พอ
+    จะแตกจึงเป็น 2 เท่าของค่านี้โดยปริยาย เพราะต่ำกว่านั้นแบ่งเป็นสองก้อนไม่ได้
+    เลขแยกสองตัวที่เคยใช้ (threshold กับ len//6) จูนกันคนละทางจนกลุ่มใหญ่จริง
+    ไม่เคยแตก ส่วนกลุ่มขนาดกลางถูกซอยจนเหลือก้อนละจุดสองจุด
+
+    เศษที่ HDBSCAN ไม่รับเข้าก้อนย่อยไหนเลยจะถือ label ของกลุ่มแม่ต่อ ถ้าเหลือ
+    น้อยกว่า min_cluster_size ก็คืนให้เป็น noise แทนที่จะปล่อยเป็น topic จิ๋ว
 
     ใช้ UMAP embedding ที่คำนวณไว้แล้วจากรอบแรก (model.umap_model.embedding_)
     ไม่ต้องคำนวณใหม่ และเรียงตามลำดับเดียวกับ points เพราะเป็นอินพุตชุดเดียวกัน
@@ -281,15 +292,25 @@ def split_large_topics(model, points: pd.DataFrame, embeddings: np.ndarray, min_
 
     assigned = points[points.topic != -1]
     for topic_id, group in assigned.groupby("topic"):
-        if len(group) < min_size:
+        if len(group) < min_cluster_size * 2:
             continue
         idx = group.index.to_numpy()
-        sub_mcs = max(2, len(idx) // 6)
-        sub_labels = HDBSCAN(min_cluster_size=sub_mcs, metric="euclidean").fit_predict(reduced[idx])
+        sub_labels = HDBSCAN(
+            min_cluster_size=min_cluster_size, metric="euclidean"
+        ).fit_predict(reduced[idx])
+        if (sub_labels == -1).all():
+            continue  # ไม่มีโครงสร้างย่อยให้เห็น ปล่อยกลุ่มไว้ทั้งก้อน
 
+        kept = 0
         for pos, lab in zip(idx, sub_labels):
             if lab != -1:
                 sub_topic.loc[pos] = f"{topic_id}.{lab}"
+                kept += 1
+
+        if len(idx) - kept < min_cluster_size:
+            for pos, lab in zip(idx, sub_labels):
+                if lab == -1:
+                    sub_topic.loc[pos] = "-1"
 
         for lab in set(sub_labels):
             if lab == -1:
@@ -332,8 +353,9 @@ def main() -> None:
                     help="ค่า cosine similarity ขั้นต่ำที่จะย้าย outlier เข้ากลุ่ม "
                          "(ค่าเริ่มต้น 0.30 วัดจากข้อมูลจริงว่าแยกเคสย้ายถูก/ผิดได้ดี)")
     ap.add_argument("--split-large", type=int, default=None, metavar="N",
-                    help="จับกลุ่มซ้ำเฉพาะกลุ่มที่มีสมาชิก >= N เพื่อดึงรายละเอียดย่อยออกมา "
-                         "เช่น --split-large 15")
+                    help="ขนาดเล็กสุดของก้อนย่อยที่ยอมรับเวลาจับกลุ่มซ้ำข้างในกลุ่มใหญ่ "
+                         "กลุ่มที่มีสมาชิก >= 2N จะถูกแตก เศษที่เหลือ < N กลายเป็น noise "
+                         "ปกติใส่เท่ากับ --mcs เช่น --mcs 8 --split-large 8")
     ap.add_argument("--split-large-pct", type=float, default=None, metavar="X",
                     help="กำหนด --split-large เป็น X%% ของจำนวนเอกสารแทนเลขตายตัว "
                          "(ไม่มีผลถ้าใส่ --split-large ด้วย)")
@@ -415,7 +437,7 @@ def _run(args, points, docs) -> None:
     mode = (f"ย้าย outlier เข้ากลุ่มใกล้สุด (threshold {args.outlier_threshold})"
             if args.reduce_outliers else "ปล่อย outlier ทิ้ง")
     if args.split_large:
-        mode += f"  ·  แตกกลุ่มที่มี >= {args.split_large} จุด"
+        mode += f"  ·  แตกกลุ่มที่มี >= {args.split_large * 2} จุด เป็นก้อนย่อย >= {args.split_large}"
     print(f"ทดลอง min_cluster_size {configs}  ·  {mode}\n")
 
     results = []
@@ -483,7 +505,7 @@ def _run(args, points, docs) -> None:
             flag = f"  เฟ้อ {inflation:.2f}x" if inflation > 1.01 else ""
             members = assigned[assigned.topic == topic_id]
 
-            will_split = fine_topic is not None and stat.mentions >= args.split_large
+            will_split = fine_topic is not None and stat.mentions >= args.split_large * 2
             tag = "  [ก่อนแตกกลุ่ม]" if will_split else ""
 
             print(f"\n  {stat.mentions:>3} จุด /{stat.reach:>3} คน{flag:>12}  {', '.join(words)}{tag}")

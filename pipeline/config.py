@@ -41,24 +41,26 @@ VIOLATION_ZEROSHOT_THRESHOLD = float(os.environ.get("VIOLATION_ZEROSHOT_THRESHOL
 VIOLATION_THRESHOLD = float(os.environ.get("VIOLATION_THRESHOLD", "0.5"))
 CLASSIFIER_BATCH_SIZE = int(os.environ.get("CLASSIFIER_BATCH_SIZE", "16"))
 
-# Calibrated on the 145-point corpus (see data/reports/cluster_all-MiniLM-L6-v2_
-# n145_mcs4_reduce0.3_split13_*.txt). Kept as percentages so they still hold as
-# the corpus grows, which is why cluster_points.py takes --mcs-pct at all.
-MIN_CLUSTER_SIZE_PCT = float(os.environ.get("MIN_CLUSTER_SIZE_PCT", "2.8"))
-SPLIT_LARGE_PCT = float(os.environ.get("SPLIT_LARGE_PCT", "9.0"))
+# The smallest group worth calling a topic, as a percentage of the corpus so
+# it still means something as the corpus grows. It is the only clustering size
+# knob: splitting an oversized topic reuses it rather than taking a number of
+# its own (see scripts/cluster_points.py:split_large_topics). Swept on the
+# 398-point wave-1 corpus; 2.0% leaves no topic below the bar and no topic
+# holding a quarter of the corpus.
+MIN_CLUSTER_SIZE_PCT = float(os.environ.get("MIN_CLUSTER_SIZE_PCT", "2.0"))
 OUTLIER_THRESHOLD = float(os.environ.get("OUTLIER_THRESHOLD", "0.30"))
 
 # Topic identity across runs. A new group inherits an existing topic's id when
 # it holds at least TOPIC_CARRY_MIN of that topic's surviving points, which is
-# what keeps topic_trends continuous. TOPIC_SPLIT_MIN is the share a second
+# what keeps a topic's trend line continuous. TOPIC_SPLIT_MIN is the share a second
 # group needs before the run is reported as a split rather than noise.
 # Both are starting points, not calibrated numbers — see docs/pipeline.md.
 TOPIC_CARRY_MIN = float(os.environ.get("TOPIC_CARRY_MIN", "0.50"))
 TOPIC_SPLIT_MIN = float(os.environ.get("TOPIC_SPLIT_MIN", "0.20"))
 
-# Written into topic_versions.model_version so a later run can tell which
-# canonical_topics rows this pipeline owns and may replace. Rows without this
-# marker (the seeded demo topics) are never touched.
+# Recorded as ai_model_runs.model_version so a run can be traced back to the
+# code that produced it. It is no longer an ownership marker: topic_versions is
+# gone, and canonical_topics.field_id scopes a run to its own field instead.
 PIPELINE_TAG = "pipeline:gnp-ai"
 
 

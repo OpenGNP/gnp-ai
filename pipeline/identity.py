@@ -1,8 +1,8 @@
 """Decide which freshly clustered group is which existing topic.
 
 Clustering has no memory: every run produces anonymous groups. Writing them as
-new rows each time is why topic ids churned and `topic_trends` never spanned
-more than one run.
+new rows each time is why topic ids churned, and why a trend line could never
+span more than one run.
 
 Identity is resolved from **membership**, not from the embedding geometry that
 produced the clusters in the first place — asking "where did topic 44's points
@@ -41,13 +41,15 @@ class IdentityPlan:
     # old topics nothing claimed and nothing absorbed — safe to remove
     gone: list[int] = field(default_factory=list)
     events: list[str] = field(default_factory=list)
+    # how many groups this run produced, so `new` can be counted rather than
+    # inferred from the event log, which carries notes as well as decisions
+    drafts: int = 0
 
     def summary(self) -> dict:
-        kinds = Counter(event.split(":", 1)[0] for event in self.events)
         return {
             "carried": len(self.reuse),
-            "new": kinds.get("new", 0),
-            "split": kinds.get("split", 0),
+            "new": self.drafts - len(self.reuse),
+            "split": sum(1 for e in self.events if e.startswith("split:")),
             "merged": len(self.merged),
             "gone": len(self.gone),
         }
@@ -71,9 +73,9 @@ def resolve(
     }
     old_size = Counter(previous.values())
 
-    plan = IdentityPlan()
+    plan = IdentityPlan(drafts=len(result.topics))
     if not old_size:
-        plan.events.append(f"new:{len(result.topics)} (no previous pipeline topics)")
+        plan.events.append(f"cold start: {len(result.topics)} group(s), no previous topics")
         return plan
 
     # ── how much of each old topic landed in each new group ──
@@ -105,18 +107,35 @@ def resolve(
         plan.reuse[winner] = old_id
         for _, _, loser in contenders[1:]:
             plan.events.append(
-                f"new:{loser} also matched {old_id} but lost the claim"
+                f"tie:{loser} also matched {old_id} but lost the claim"
             )
 
-    # ── merges: a group that holds most of two old topics absorbs the loser ──
-    for draft in result.topics:
-        survivor = plan.reuse.get(draft.key)
-        if survivor is None:
+    # ── merges: an old topic no group carried forward, but whose members
+    # mostly landed in one group, is absorbed by that group rather than lost.
+    #
+    # Resolved per old topic, not per group. An old topic that splits exactly
+    # in half gives both halves a containment of 0.50, so both clear carry_min
+    # and both would otherwise claim it: assigning per group let the later one
+    # silently overwrite the earlier, and could mark a topic merged that was
+    # also being carried forward — leaving an active row pointing at a
+    # survivor it never joined.
+    carried = set(plan.reuse.values())
+    for old_id in old_size:
+        if old_id in carried:
             continue
-        for old_id, share in plan.containment[draft.key].items():
-            if old_id != survivor and share >= carry_min:
-                plan.merged[old_id] = survivor
-                plan.events.append(f"merged:{old_id} into {survivor}")
+        bidders = [
+            (plan.containment[draft.key][old_id], plan.reuse[draft.key])
+            for draft in result.topics
+            if draft.key in plan.reuse
+            and plan.containment[draft.key].get(old_id, 0.0) >= carry_min
+        ]
+        if not bidders:
+            continue
+        # Largest share wins; an exact tie goes to the lower surviving id so
+        # two runs over the same data cannot disagree.
+        _, survivor = max(bidders, key=lambda bid: (bid[0], -bid[1]))
+        plan.merged[old_id] = survivor
+        plan.events.append(f"merged:{old_id} into {survivor}")
 
     # ── events: what happened to each old topic ──
     for old_id in old_size:

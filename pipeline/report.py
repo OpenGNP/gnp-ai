@@ -46,18 +46,24 @@ POINTS_SQL = """
     ORDER BY p.answer_id, p.id
 """
 
-# Latest trend row per topic — the per-period counts behind each topic.
-TRENDS_SQL = """
-    SELECT DISTINCT ON (t.canonical_topic_id)
-           t.canonical_topic_id AS topic_id,
-           c.canonical_name     AS topic_name,
+# Counted from the points themselves. topic_trends used to cache this per
+# period and no longer exists — the counts were always derivable, since every
+# point carries its topic, its sentiment and the date it was submitted.
+TOPICS_SQL = """
+    SELECT c.id   AS topic_id,
+           c.form_id,
+           c.field_id,
+           c.canonical_name          AS topic_name,
            c.representative_keywords AS keywords,
-           t.feedback_count, t.positive_count, t.neutral_count,
-           t.negative_count, t.severe_count
-    FROM topic_trends t
-    JOIN canonical_topics c ON c.id = t.canonical_topic_id
-    JOIN topic_versions v ON v.canonical_topic_id = c.id AND v.model_version = %s
-    ORDER BY t.canonical_topic_id, t.period_end DESC
+           count(p.id)                                                   AS feedback_count,
+           count(*) FILTER (WHERE p.sentiment_label = 'positive')        AS positive_count,
+           count(*) FILTER (WHERE p.sentiment_label = 'neutral')         AS neutral_count,
+           count(*) FILTER (WHERE p.sentiment_label = 'negative')        AS negative_count,
+           count(*) FILTER (WHERE p.is_severe)                           AS severe_count
+    FROM canonical_topics c
+    LEFT JOIN points p ON p.canonical_topic_id = c.id
+    WHERE COALESCE(c.status, 'active') <> 'merged'
+    GROUP BY c.id, c.form_id, c.field_id, c.canonical_name, c.representative_keywords
 """
 
 
@@ -73,9 +79,9 @@ def rank(trends: pd.DataFrame) -> pd.DataFrame:
     return trends if trends.empty else trends.sort_values("feedback_count", ascending=False)
 
 
-def build(conn: psycopg.Connection, pipeline_tag: str, *, examples: int = 3) -> tuple[str, pd.DataFrame]:
+def build(conn: psycopg.Connection, *, examples: int = 3) -> tuple[str, pd.DataFrame]:
     points = _frame(conn, POINTS_SQL)
-    trends = rank(_frame(conn, TRENDS_SQL, (pipeline_tag,)))
+    trends = rank(_frame(conn, TOPICS_SQL))
 
     lines: list[str] = []
     add = lines.append
