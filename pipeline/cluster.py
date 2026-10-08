@@ -43,7 +43,6 @@ class ClusterResult:
     topics: list[TopicDraft]
     outliers: list[ClusterablePoint]
     min_cluster_size: int
-    split_large: int
 
 
 def _counts(members: list[ClusterablePoint]) -> dict[str, int]:
@@ -68,13 +67,12 @@ def cluster(points: list[ClusterablePoint]) -> ClusterResult:
     n_docs = len(docs)
 
     min_cluster_size = max(2, round(n_docs * config.MIN_CLUSTER_SIZE_PCT / 100))
-    split_large = max(3, round(n_docs * config.SPLIT_LARGE_PCT / 100))
 
     model, labels = fit(min_cluster_size, docs, embeddings)
     labels = reduce_outliers(model, docs, labels, embeddings, config.OUTLIER_THRESHOLD)
 
     frame = pd.DataFrame({"text": docs, "topic": labels})
-    sub_topic, sub_words = split_large_topics(model, frame, embeddings, split_large)
+    sub_topic, sub_words = split_large_topics(model, frame, embeddings, min_cluster_size)
     keys = sub_topic.tolist()
 
     topics: list[TopicDraft] = []
@@ -127,5 +125,4 @@ def cluster(points: list[ClusterablePoint]) -> ClusterResult:
         topics=topics,
         outliers=outliers,
         min_cluster_size=min_cluster_size,
-        split_large=split_large,
     )

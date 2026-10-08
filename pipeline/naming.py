@@ -4,9 +4,7 @@ c-TF-IDF gives the terms that separate a topic from its neighbours, which makes
 good keywords ("sit, students, activities") and a bad heading. This asks the
 local Mistral to read the cluster's own points and name what they share.
 
-The result goes into canonical_topics.canonical_name / canonical_summary and is
-also recorded in topic_versions (generated_title, generated_summary,
-model_version) — the table the schema already provides for exactly this.
+The result goes into canonical_topics.canonical_name / canonical_summary.
 """
 
 from __future__ import annotations

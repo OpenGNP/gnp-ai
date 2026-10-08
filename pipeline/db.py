@@ -7,8 +7,8 @@ statement here is deliberately narrow:
   * it only clusters points that carry an embedding, which the seeded demo
     points do not — so seeded rows and their topic assignments are never
     disturbed;
-  * it only deletes canonical_topics that a previous pipeline run created,
-    identified by the PIPELINE_TAG marker in topic_versions.model_version.
+  * it only touches canonical_topics belonging to the form it is processing,
+    which canonical_topics.form_id makes explicit.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ class ClusterablePoint:
     canonical_topic_id: int | None = None
 
 
-def connect() -> psycopg.Connection:
+def _dial() -> psycopg.Connection:
     """autocommit is on deliberately.
 
     With autocommit off, the first read opens an implicit transaction, and a
@@ -65,7 +65,59 @@ def connect() -> psycopg.Connection:
     return conn
 
 
-def embedding_dims(conn: psycopg.Connection) -> int | None:
+class Connection:
+    """A psycopg connection that re-dials when the network has dropped it.
+
+    The job spends minutes at a time inside Ollama and the CPU classifiers
+    without touching Postgres. A connection left idle that long over a VPN
+    does not reliably survive — it surfaces as
+
+        OperationalError: could not receive data from server
+
+    on the next statement, which is nowhere near the code that could recover.
+    Re-dialling here means every caller keeps the connection it was handed.
+
+    It only ever re-dials between transactions. A connection that dies inside
+    one has to fail loudly: replacing it would silently drop the statements
+    already issued and leave the rest to run against a fresh, empty
+    transaction.
+    """
+
+    def __init__(self) -> None:
+        self._conn = _dial()
+
+    def _live(self) -> psycopg.Connection:
+        if not self._conn.closed:
+            if self._conn.info.transaction_status != psycopg.pq.TransactionStatus.IDLE:
+                return self._conn  # mid-transaction, or already broken inside one
+            try:
+                with self._conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                return self._conn
+            except psycopg.Error:
+                pass
+        try:
+            self._conn.close()
+        except psycopg.Error:
+            pass
+        self._conn = _dial()
+        return self._conn
+
+    def cursor(self, *args, **kwargs):
+        return self._live().cursor(*args, **kwargs)
+
+    def transaction(self, *args, **kwargs):
+        return self._live().transaction(*args, **kwargs)
+
+    def close(self) -> None:
+        self._conn.close()
+
+
+def connect() -> Connection:
+    return Connection()
+
+
+def embedding_dims(conn: Connection) -> int | None:
     """Dimension the points.embedding column is declared with, or None when the
     column is unconstrained. pgvector rejects any other width, so the encoder
     output has to be fitted to this."""
@@ -89,7 +141,51 @@ def embedding_dims(conn: psycopg.Connection) -> int | None:
 
 # ── ingest ─────────────────────────────────────────────────────────────
 
-def pending_answers(conn: psycopg.Connection, limit: int | None = None) -> list[tuple[int, str]]:
+def analysable_fields(conn: Connection) -> list[tuple[int, int, str]]:
+    """(form_id, field_id, label) for every field the form marked for analysis.
+
+    `analyze_with_ai` replaces the old guess of "any field with free text":
+    the form author now says which questions the pipeline should read. This is
+    the unit of the ingest stage, because an answer belongs to one field.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT f.form_id, f.id, f.field_label
+            FROM form_fields f
+            WHERE f.analyze_with_ai IS TRUE AND f.deleted_at IS NULL
+            ORDER BY f.form_id, f.id
+            """
+        )
+        return [(row[0], row[1], row[2]) for row in cur.fetchall()]
+
+
+def analysable_forms(conn: Connection) -> list[tuple[int, str]]:
+    """(form_id, form_title) for every form with at least one analysed field.
+
+    This is the unit of the cluster stage. A form is one survey, so the answers
+    to all of its analysed questions are one body of feedback: a complaint
+    about room temperature is the same issue whether it arrived through the
+    curriculum question or the facilities one. Clustering per form also gives
+    HDBSCAN the corpus the dashboard displays, which is what the parameters
+    that scale with corpus size are tuned against.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT DISTINCT fo.id, fo.form_title
+            FROM forms fo
+            JOIN form_fields f ON f.form_id = fo.id
+            WHERE f.analyze_with_ai IS TRUE AND f.deleted_at IS NULL
+            ORDER BY fo.id
+            """
+        )
+        return [(row[0], row[1]) for row in cur.fetchall()]
+
+
+def pending_answers(
+    conn: Connection, field_id: int, limit: int | None = None
+) -> list[tuple[int, str]]:
     """Free-text answers with no points row yet.
 
     Radio/checkbox answers store answer_option_id and leave answer_text NULL,
@@ -99,17 +195,19 @@ def pending_answers(conn: psycopg.Connection, limit: int | None = None) -> list[
         SELECT a.id, a.answer_text
         FROM answers a
         LEFT JOIN points p ON p.answer_id = a.id
-        WHERE a.answer_text IS NOT NULL AND btrim(a.answer_text) <> '' AND p.id IS NULL
+        WHERE a.field_id = %s
+          AND a.answer_text IS NOT NULL AND btrim(a.answer_text) <> ''
+          AND p.id IS NULL
         ORDER BY a.id
     """
     if limit:
         sql += f" LIMIT {int(limit)}"
     with conn.cursor() as cur:
-        cur.execute(sql)
+        cur.execute(sql, (field_id,))
         return [(row[0], row[1]) for row in cur.fetchall()]
 
 
-def insert_points(conn: psycopg.Connection, rows: list[dict]) -> int:
+def insert_points(conn: Connection, rows: list[dict]) -> int:
     """processing_status is constrained by chk_processing to
     pending | assigned | unknown | clustered, and sentiment_label by
     chk_sentiment to positive | neutral | negative (NULL allowed)."""
@@ -139,7 +237,7 @@ _FORM_FILTER = """
 
 
 def points_missing_features(
-    conn: psycopg.Connection, form_ids: list[int] | None = None
+    conn: Connection, form_ids: list[int] | None = None
 ) -> list[tuple[int, str]]:
     """Existing points with no embedding — the seeded rows. Only touched by --backfill."""
     sql = """
@@ -158,7 +256,7 @@ def points_missing_features(
 
 
 def points_for_relabel(
-    conn: psycopg.Connection, form_ids: list[int] | None = None
+    conn: Connection, form_ids: list[int] | None = None
 ) -> list[tuple[int, str]]:
     """Points the pipeline owns (it is the only writer of embeddings), for
     re-running the classifiers after a model change. Seeded points have no
@@ -178,7 +276,7 @@ def points_for_relabel(
         return [(row[0], row[1]) for row in cur.fetchall()]
 
 
-def update_point_labels(conn: psycopg.Connection, rows: list[dict]) -> int:
+def update_point_labels(conn: Connection, rows: list[dict]) -> int:
     if not rows:
         return 0
     with conn.cursor() as cur:
@@ -193,7 +291,7 @@ def update_point_labels(conn: psycopg.Connection, rows: list[dict]) -> int:
     return len(rows)
 
 
-def update_point_features(conn: psycopg.Connection, rows: list[dict]) -> int:
+def update_point_features(conn: Connection, rows: list[dict]) -> int:
     if not rows:
         return 0
     with conn.cursor() as cur:
@@ -213,48 +311,52 @@ def update_point_features(conn: psycopg.Connection, rows: list[dict]) -> int:
 
 # ── clustering ─────────────────────────────────────────────────────────
 
-def clusterable_points(conn: psycopg.Connection) -> list[ClusterablePoint]:
+def clusterable_points(conn: Connection, form_id: int) -> list[ClusterablePoint]:
+    """Every embedded point of one form, across all of its analysed fields.
+
+    A point does not store its form, so the link runs
+    points -> answers -> submissions -> forms. Fields the author left out of
+    the analysis never produced points, so no filter on analyze_with_ai is
+    needed here.
+    """
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, point_text, embedding, sentiment_label, is_severe, created_at,
-                   canonical_topic_id
-            FROM points
-            WHERE embedding IS NOT NULL AND point_text IS NOT NULL
-            ORDER BY id
-            """
+            SELECT p.id, p.point_text, p.embedding, p.sentiment_label, p.is_severe,
+                   p.created_at, p.canonical_topic_id
+            FROM points p
+            JOIN answers a ON a.id = p.answer_id
+            JOIN submissions s ON s.id = a.submission_id
+            WHERE s.form_id = %s
+              AND p.embedding IS NOT NULL AND p.point_text IS NOT NULL
+            ORDER BY p.id
+            """,
+            (form_id,),
         )
         return [ClusterablePoint(*row) for row in cur.fetchall()]
 
 
-def pipeline_topics(conn: psycopg.Connection) -> dict[int, str]:
-    """Topics a previous run created, as {id: name}. Carried-over topics keep
-    their name so the dashboard does not relabel the same issue every run."""
+def existing_topics(conn: Connection, form_id: int) -> dict[int, str]:
+    """Live topics of this form, as {id: name}.
+
+    There is no ownership marker any more: `canonical_topics.form_id` scopes a
+    run to its own form, so a run can only ever replace topics it is
+    responsible for. Topics already retired by a merge are left out.
+    """
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT ct.id, ct.canonical_name
-            FROM canonical_topics ct
-            JOIN topic_versions v
-              ON v.canonical_topic_id = ct.id AND v.model_version = %s
+            SELECT id, canonical_name FROM canonical_topics
+            WHERE form_id = %s AND COALESCE(status, 'active') <> 'merged'
             """,
-            (config.PIPELINE_TAG,),
+            (form_id,),
         )
         return {row[0]: row[1] for row in cur.fetchall()}
 
 
-def pipeline_topic_ids(conn: psycopg.Connection) -> list[int]:
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT DISTINCT canonical_topic_id FROM topic_versions WHERE model_version = %s",
-            (config.PIPELINE_TAG,),
-        )
-        return [row[0] for row in cur.fetchall()]
-
-
-def delete_topics(conn: psycopg.Connection, topic_ids: list[int]) -> int:
-    """Deleting a topic cascades to topic_trends and topic_versions, and sets
-    points.canonical_topic_id back to NULL (fk_point_topic is ON DELETE SET NULL)."""
+def delete_topics(conn: Connection, topic_ids: list[int]) -> int:
+    """Deleting a topic sets its points' canonical_topic_id back to NULL
+    (fk_point_topic is ON DELETE SET NULL), leaving them unclustered."""
     if not topic_ids:
         return 0
     with conn.cursor() as cur:
@@ -263,44 +365,36 @@ def delete_topics(conn: psycopg.Connection, topic_ids: list[int]) -> int:
 
 
 def insert_topic(
-    conn: psycopg.Connection,
+    conn: Connection,
     *,
+    form_id: int,
     name: str,
     summary: str | None,
     keywords: str,
     centroid: np.ndarray,
     size: int,
-    first_seen: datetime,
-    last_seen: datetime,
+    field_id: int | None = None,
 ) -> int:
+    """field_id stays NULL for a topic the pipeline creates: its members come
+    from every analysed question of the form, so naming one of them would be
+    wrong. The column is nullable and the server only ever filters on form_id
+    (idx_canonical_topics_form_status), so nothing downstream depends on it."""
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO canonical_topics
-                (canonical_name, canonical_summary, representative_keywords, centroid_vector,
-                 topic_size, status, first_detected_at, last_updated_at)
-            VALUES (%s, %s, %s, %s, %s, 'active', %s, %s)
+                (form_id, field_id, canonical_name, canonical_summary,
+                 representative_keywords, centroid_vector, topic_size, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active')
             RETURNING id
             """,
-            (name, summary, keywords, centroid, size, first_seen, last_seen),
+            (form_id, field_id, name, summary, keywords, centroid, size),
         )
-        topic_id = cur.fetchone()[0]
-        # The ownership marker. Without it a later run cannot tell this topic
-        # apart from one the server seeded, and would have to leave it alone.
-        cur.execute(
-            """
-            INSERT INTO topic_versions
-                (canonical_topic_id, generated_title, generated_summary,
-                 representative_keywords, model_version)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (topic_id, name, summary, keywords, config.PIPELINE_TAG),
-        )
-    return topic_id
+        return cur.fetchone()[0]
 
 
 def update_topic(
-    conn: psycopg.Connection,
+    conn: Connection,
     topic_id: int,
     *,
     name: str,
@@ -308,50 +402,43 @@ def update_topic(
     keywords: str,
     centroid: np.ndarray,
     size: int,
-    last_seen: datetime,
 ) -> None:
-    """Carry an existing topic forward. first_detected_at is deliberately left
-    alone — it marks when the issue first appeared, not when it was last seen,
-    and the dashboard's trend line depends on the id staying put."""
+    """Carry an existing topic forward. created_at is left alone — it marks when
+    the issue first appeared, and the dashboard's trend depends on the id and
+    that date staying put."""
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE canonical_topics
-            SET canonical_name = %s, canonical_summary = COALESCE(%s, canonical_summary),
+            SET canonical_name = %s,
+                canonical_summary = COALESCE(%s, canonical_summary),
                 representative_keywords = %s, centroid_vector = %s,
-                topic_size = %s, last_updated_at = %s, status = 'active'
+                topic_size = %s, status = 'active', updated_at = now()
             WHERE id = %s
             """,
-            (name, summary, keywords, centroid, size, last_seen, topic_id),
-        )
-        # One version row per run: the history of how this topic was described.
-        cur.execute(
-            """
-            INSERT INTO topic_versions
-                (canonical_topic_id, generated_title, generated_summary,
-                 representative_keywords, model_version)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (topic_id, name, summary, keywords, config.PIPELINE_TAG),
+            (name, summary, keywords, centroid, size, topic_id),
         )
 
 
-def mark_topics_merged(conn: psycopg.Connection, topic_ids: list[int]) -> int:
-    """A topic absorbed by another is retired, not deleted: deleting it would
-    cascade away its topic_trends rows, which is the history the dashboard
-    needs. `merged` is one of the values chk_topic_status already allows."""
-    if not topic_ids:
+def mark_topics_merged(conn: Connection, absorbed: dict[int, int]) -> int:
+    """A topic absorbed by another is retired, not deleted, and now records
+    where it went: merged_into_id is the column the schema added for exactly
+    this. Deleting it would take its points' history with it."""
+    if not absorbed:
         return 0
     with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE canonical_topics SET status = 'merged', last_updated_at = now() "
-            "WHERE id = ANY(%s)",
-            (topic_ids,),
+        cur.executemany(
+            """
+            UPDATE canonical_topics
+            SET status = 'merged', merged_into_id = %(into)s, updated_at = now()
+            WHERE id = %(id)s
+            """,
+            [{"id": old, "into": new} for old, new in absorbed.items()],
         )
-        return cur.rowcount
+        return len(absorbed)
 
 
-def assign_points(conn: psycopg.Connection, rows: list[dict]) -> int:
+def assign_points(conn: Connection, rows: list[dict]) -> int:
     if not rows:
         return 0
     with conn.cursor() as cur:
@@ -368,68 +455,33 @@ def assign_points(conn: psycopg.Connection, rows: list[dict]) -> int:
     return len(rows)
 
 
-def insert_trend(
-    conn: psycopg.Connection,
-    *,
-    topic_id: int,
-    period_start: datetime,
-    period_end: datetime,
-    counts: dict[str, int],
-) -> None:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO topic_trends
-                (canonical_topic_id, period_start, period_end, feedback_count,
-                 positive_count, neutral_count, negative_count, severe_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                topic_id, period_start, period_end, counts["total"],
-                counts["positive"], counts["neutral"], counts["negative"], counts["severe"],
-            ),
-        )
-
-
-def clear_unassigned(conn: psycopg.Connection, point_ids: list[int]) -> int:
-    if not point_ids:
-        return 0
-    with conn.cursor() as cur:
-        cur.execute("DELETE FROM unassigned_points WHERE point_id = ANY(%s)", (point_ids,))
-        return cur.rowcount
-
-
-def insert_unassigned(conn: psycopg.Connection, rows: list[dict]) -> int:
-    if not rows:
-        return 0
-    with conn.cursor() as cur:
-        cur.executemany(
-            """
-            INSERT INTO unassigned_points (point_id, embedding, reason)
-            VALUES (%(point_id)s, %(embedding)s, %(reason)s)
-            """,
-            rows,
-        )
-    return len(rows)
+# topic_trends and unassigned_points were dropped from the schema. Trends are
+# derived from points.created_at at read time, and an unclustered point is
+# simply one with canonical_topic_id IS NULL.
 
 
 def record_run(
-    conn: psycopg.Connection,
+    conn: Connection,
     *,
+    form_id: int,
     parameters: str,
     started_at: datetime,
     completed_at: datetime,
+    status: str = "completed",
+    error: str | None = None,
 ) -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO ai_model_runs
-                (model_name, model_version, embedding_model, clustering_algorithm,
-                 parameters, started_at, completed_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (form_id, model_name, model_version, embedding_model,
+                 clustering_algorithm, parameters, status, error,
+                 started_at, completed_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
-                config.DECOMPOSE_MODEL, config.DECOMPOSE_PROMPT, config.EMBEDDING_MODEL,
-                "BERTopic+HDBSCAN", parameters, started_at, completed_at,
+                form_id, config.DECOMPOSE_MODEL, config.DECOMPOSE_PROMPT,
+                config.EMBEDDING_MODEL, "BERTopic+HDBSCAN", parameters,
+                status, error, started_at, completed_at,
             ),
         )
