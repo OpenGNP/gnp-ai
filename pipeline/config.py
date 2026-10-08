@@ -41,13 +41,24 @@ VIOLATION_ZEROSHOT_THRESHOLD = float(os.environ.get("VIOLATION_ZEROSHOT_THRESHOL
 VIOLATION_THRESHOLD = float(os.environ.get("VIOLATION_THRESHOLD", "0.5"))
 CLASSIFIER_BATCH_SIZE = int(os.environ.get("CLASSIFIER_BATCH_SIZE", "16"))
 
-# The smallest group worth calling a topic, as a percentage of the corpus so
-# it still means something as the corpus grows. It is the only clustering size
-# knob: splitting an oversized topic reuses it rather than taking a number of
-# its own (see scripts/cluster_points.py:split_large_topics). Swept on the
-# 398-point wave-1 corpus; 2.0% leaves no topic below the bar and no topic
-# holding a quarter of the corpus.
-MIN_CLUSTER_SIZE_PCT = float(os.environ.get("MIN_CLUSTER_SIZE_PCT", "2.0"))
+# The smallest group worth calling a topic. Two bars, because they answer
+# different questions, and min_cluster_size is whichever is higher:
+#
+#   MIN_CLUSTER_POINTS  below this a group is too small to act on, however
+#                       small the corpus. A floor of 2 — HDBSCAN's own minimum
+#                       — said nothing about the work.
+#   MIN_CLUSTER_SIZE_PCT  on a large corpus, do not surface what is
+#                       statistically trivial.
+#
+# A percentage alone scales the wrong way: it coarsens topics as feedback
+# accumulates, when what should stay constant is how fine a topic is. At 2.0%
+# the 1109-point corpus reached min_cluster_size 22, and themes raised eight
+# or fifteen times — orientation missing visa information, announcements lost
+# in a Teams scroll — were dropped as noise while coherence (NPMI) fell to
+# -0.197, meaning a topic's own words co-occurred less than chance. These
+# values give 8 at 398 points and 11 at 1109, both measured directly.
+MIN_CLUSTER_POINTS = int(os.environ.get("MIN_CLUSTER_POINTS", "8"))
+MIN_CLUSTER_SIZE_PCT = float(os.environ.get("MIN_CLUSTER_SIZE_PCT", "1.0"))
 OUTLIER_THRESHOLD = float(os.environ.get("OUTLIER_THRESHOLD", "0.30"))
 
 # Topic identity across runs. A new group inherits an existing topic's id when

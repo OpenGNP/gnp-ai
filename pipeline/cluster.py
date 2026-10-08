@@ -66,7 +66,9 @@ def cluster(points: list[ClusterablePoint]) -> ClusterResult:
     embeddings = np.stack([as_array(p.embedding) for p in points])
     n_docs = len(docs)
 
-    min_cluster_size = max(2, round(n_docs * config.MIN_CLUSTER_SIZE_PCT / 100))
+    min_cluster_size = max(
+        config.MIN_CLUSTER_POINTS, round(n_docs * config.MIN_CLUSTER_SIZE_PCT / 100)
+    )
 
     model, labels = fit(min_cluster_size, docs, embeddings)
     labels = reduce_outliers(model, docs, labels, embeddings, config.OUTLIER_THRESHOLD)
