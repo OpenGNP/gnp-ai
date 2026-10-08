@@ -341,26 +341,45 @@ def existing_topics(conn: Connection, form_id: int) -> dict[int, str]:
 
     There is no ownership marker any more: `canonical_topics.form_id` scopes a
     run to its own form, so a run can only ever replace topics it is
-    responsible for. Topics already retired by a merge are left out.
+    responsible for. Topics already retired — absorbed by a merge, or archived
+    when nothing claimed them — are left out: a new group can only inherit
+    from a topic that is still live.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
             SELECT id, canonical_name FROM canonical_topics
-            WHERE form_id = %s AND COALESCE(status, 'active') <> 'merged'
+            WHERE form_id = %s
+              AND COALESCE(status, 'active') NOT IN ('merged', 'archived')
             """,
             (form_id,),
         )
         return {row[0]: row[1] for row in cur.fetchall()}
 
 
-def delete_topics(conn: Connection, topic_ids: list[int]) -> int:
-    """Deleting a topic sets its points' canonical_topic_id back to NULL
-    (fk_point_topic is ON DELETE SET NULL), leaving them unclustered."""
+def archive_topics(conn: Connection, topic_ids: list[int]) -> int:
+    """Retire a topic no new group claimed, without destroying it.
+
+    The dashboard only reads status='active', so archiving hides the topic
+    exactly as deleting did — but the row survives, and with it the name the
+    issue was reported under and the created_at that says when it first
+    appeared. A delete threw both away for nothing: the points are reassigned
+    in the same transaction either way, so nothing is freed.
+
+    Unlike a merge there is no survivor to point at: merged_into_id stays NULL
+    because the members did not go anywhere identifiable.
+    """
     if not topic_ids:
         return 0
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM canonical_topics WHERE id = ANY(%s)", (topic_ids,))
+        cur.execute(
+            """
+            UPDATE canonical_topics
+            SET status = 'archived', updated_at = now()
+            WHERE id = ANY(%s)
+            """,
+            (topic_ids,),
+        )
         return cur.rowcount
 
 

@@ -38,8 +38,10 @@ class IdentityPlan:
     containment: dict[str, dict[int, float]] = field(default_factory=dict)
     # absorbed topic id -> surviving topic id
     merged: dict[int, int] = field(default_factory=dict)
-    # old topics nothing claimed and nothing absorbed — safe to remove
-    gone: list[int] = field(default_factory=list)
+    # old topics no group claimed and no survivor absorbed: their members
+    # left the corpus or dispersed past recognition. Archived, never
+    # deleted — the row is the only record that the issue was ever raised.
+    archived: list[int] = field(default_factory=list)
     events: list[str] = field(default_factory=list)
     # how many groups this run produced, so `new` can be counted rather than
     # inferred from the event log, which carries notes as well as decisions
@@ -51,7 +53,7 @@ class IdentityPlan:
             "new": self.drafts - len(self.reuse),
             "split": sum(1 for e in self.events if e.startswith("split:")),
             "merged": len(self.merged),
-            "gone": len(self.gone),
+            "archived": len(self.archived),
         }
 
 
@@ -123,11 +125,18 @@ def resolve(
     for old_id in old_size:
         if old_id in carried:
             continue
+        # split_min, not carry_min. carry_min is the bar for *becoming* a topic:
+        # one group has to hold half of it to inherit its id and its history.
+        # Being absorbed asks far less — only that a recognisable share of the
+        # topic went somewhere identifiable. At carry_min a topic whose members
+        # scattered 40/35/25 cleared no bar anywhere and was dropped outright,
+        # which is how "Lab Machine Login Delays" lost its history in a run
+        # where 40% of it plainly moved into one surviving topic.
         bidders = [
             (plan.containment[draft.key][old_id], plan.reuse[draft.key])
             for draft in result.topics
             if draft.key in plan.reuse
-            and plan.containment[draft.key].get(old_id, 0.0) >= carry_min
+            and plan.containment[draft.key].get(old_id, 0.0) >= split_min
         ]
         if not bidders:
             continue
@@ -147,8 +156,8 @@ def resolve(
         if len(children) > 1:
             plan.events.append(f"split:{old_id} -> {', '.join(children)}")
         if old_id not in plan.reuse.values() and old_id not in plan.merged:
-            plan.gone.append(old_id)
-            plan.events.append(f"gone:{old_id} ({known_topics.get(old_id, '?')})")
+            plan.archived.append(old_id)
+            plan.events.append(f"archived:{old_id} ({known_topics.get(old_id, '?')})")
 
     for draft in result.topics:
         if draft.key not in plan.reuse:

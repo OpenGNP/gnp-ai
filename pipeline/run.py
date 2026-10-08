@@ -229,7 +229,8 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
         counts = plan.summary()
         _log(
             f"  identity: carried {counts['carried']} · new {counts['new']} · "
-            f"split {counts['split']} · merged {counts['merged']} · gone {counts['gone']}"
+            f"split {counts['split']} · merged {counts['merged']} · "
+            f"archived {counts['archived']}"
         )
         for event in plan.events[:8]:
             _log(f"    {event}")
@@ -250,7 +251,7 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
             continue
 
         with conn.transaction():
-            removed = db.delete_topics(conn, plan.gone)
+            archived = db.archive_topics(conn, plan.archived)
             db.mark_topics_merged(conn, plan.merged)
 
             assignments: list[dict] = []
@@ -318,7 +319,7 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
 
         _log(
             f"  carried {counts['carried']}, added {counts['new']}, "
-            f"merged {counts['merged']}, dropped {removed}"
+            f"merged {counts['merged']}, archived {archived}"
         )
         total_topics += len(result.topics)
 
