@@ -235,12 +235,23 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
         for event in plan.events[:8]:
             _log(f"    {event}")
 
-        # Only brand-new topics are named: a carried topic keeps the title the
-        # dashboard already shows.
+        # A carried topic keeps the title the dashboard already shows: the
+        # same issue with more people reporting it is still the same issue,
+        # and renaming it every run would make the trend unreadable.
+        #
+        # Absorbing another topic is the exception. The scope genuinely
+        # widened, so the old title stops covering what is in the group —
+        # "Inadequate Monitor Equipment" kept its name after swallowing "LX
+        # Building Facilities" and growing from 16 points to 144, by which
+        # point it was about room equipment generally. The merges already
+        # recorded say which topics those are, so no new threshold is needed.
+        absorbed = plan.widened()
         titles: dict[str, tuple[str | None, str | None]] = {}
-        unnamed = [t for t in result.topics if t.key not in plan.reuse]
+        unnamed = [t for t in result.topics if t.key not in plan.reuse or t.key in absorbed]
         if name_topics and not dry_run and unnamed:
-            _log(f"  naming {len(unnamed)} new topic(s)")
+            renamed = sum(1 for t in unnamed if t.key in absorbed)
+            _log(f"  naming {len(unnamed) - renamed} new topic(s)"
+                 + (f", renaming {renamed} that absorbed another" if renamed else ""))
             with llm.client() as http:
                 for topic in unnamed:
                     title, summary = naming.name_topic(http, topic.keywords, topic.member_texts)
@@ -259,11 +270,14 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
                 carried = plan.reuse.get(topic.key)
                 if carried is not None:
                     topic_id = carried
+                    # titles only holds an entry for a carried topic that
+                    # absorbed another; everything else keeps its old name.
+                    title, summary = titles.get(topic.key, (None, None))
                     db.update_topic(
                         conn,
                         topic_id,
-                        name=known[topic_id],
-                        summary=None,
+                        name=title or known[topic_id],
+                        summary=summary,
                         keywords=topic.keywords,
                         centroid=topic.centroid,
                         size=topic.counts["total"],

@@ -47,6 +47,16 @@ class IdentityPlan:
     # inferred from the event log, which carries notes as well as decisions
     drafts: int = 0
 
+    def widened(self) -> set[str]:
+        """Draft keys whose carried topic absorbed another one.
+
+        These are the carried topics whose scope actually changed, as opposed
+        to the ones that merely grew — the caller renames them, because the
+        title was written for a group that no longer describes the members.
+        """
+        survivors = set(self.merged.values())
+        return {key for key, topic_id in self.reuse.items() if topic_id in survivors}
+
     def summary(self) -> dict:
         return {
             "carried": len(self.reuse),
