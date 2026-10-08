@@ -32,8 +32,29 @@ to these points.
 Answer with exactly this JSON object and nothing else:
 {{"title": "...", "summary": "..."}}"""
 
-MAX_EXAMPLES = 8
+MAX_EXAMPLES = 12
 TITLE_LIMIT = 255
+
+
+def _examples(points: list[str], k: int = MAX_EXAMPLES) -> list[str]:
+    """Pick k points spread across the whole group, not the k most typical.
+
+    The caller orders members by confidence, so the head of the list is
+    whatever sits closest to the centroid — one neighbourhood of what may be
+    a large topic. Naming a 123-point group from its eight most central
+    members produced "English Communication at International Counter" for a
+    topic about staff communication in general. Sampling at even intervals
+    shows the model the group's edges as well as its middle.
+
+    Duplicates are dropped first: feedback repeats, and eight copies of one
+    sentence spend the whole budget saying one thing.
+    """
+    seen: set[str] = set()
+    unique = [t for t in points if not (t in seen or seen.add(t))]
+    if len(unique) <= k:
+        return unique
+    step = (len(unique) - 1) / (k - 1)
+    return [unique[round(i * step)] for i in range(k)]
 
 
 def name_topic(
@@ -41,7 +62,7 @@ def name_topic(
 ) -> tuple[str | None, str | None]:
     """Returns (title, summary), or (None, None) when the model's answer is
     unusable — the caller keeps the keyword-derived name in that case."""
-    listed = "\n".join(f"- {text}" for text in points[:MAX_EXAMPLES])
+    listed = "\n".join(f"- {text}" for text in _examples(points))
     prompt = TEMPLATE.format(keywords=keywords, points=listed)
 
     raw, _ = llm.chat(http, SYSTEM_PROMPT, prompt, num_predict=160)
