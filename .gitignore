@@ -16,6 +16,7 @@ dist/
 .pytest_cache/
 # Student feedback data — must never be committed
 data/reports
+backups/
 
 # Secrets
 .env
