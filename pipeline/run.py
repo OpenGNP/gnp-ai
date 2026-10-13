@@ -192,7 +192,7 @@ def relabel(conn, *, dry_run: bool, form_ids: list[int] | None = None) -> int:
 
 # ── stage: cluster ─────────────────────────────────────────────────────
 
-def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
+def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = False) -> int:
     """Cluster each form on its own.
 
     One form is one body of feedback: a topic spans every question the author
@@ -200,6 +200,12 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
     them. canonical_topics.form_id makes that scope explicit, and the
     trade-off is deliberate — the same issue raised in two different surveys
     becomes two topics and cannot be compared across them.
+
+    A form with nothing new is left alone. Clustering has to look at the whole
+    corpus at once, so unlike ingest it cannot do only the new part — but
+    running it over unchanged points is minutes of work to arrive back where
+    it started, which a nightly cron would repeat for ever. `force` overrides
+    that, for when the parameters changed rather than the data.
     """
     forms = db.analysable_forms(conn)
     if not forms:
@@ -208,6 +214,10 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True) -> int:
 
     total_topics = 0
     for form_id, form_title in forms:
+        if not force and not db.has_unclustered(conn, form_id):
+            _log(f"cluster: form {form_id} · {form_title} — no new points, skipped")
+            continue
+
         started = datetime.now(timezone.utc)
         points = db.clusterable_points(conn, form_id)
         if len(points) < cluster_mod.MIN_POINTS:
@@ -367,11 +377,17 @@ def pass_once(conn, args) -> None:
 
     if args.ingest_only:
         return
-    if args.watch and not new_points and not args.backfill:
-        _log("cluster: skipped, no new points this pass")
-        return
 
-    recluster(conn, dry_run=args.dry_run, name_topics=not args.no_name_topics)
+    # --cluster-only is someone asking for a re-cluster, usually because a
+    # parameter changed; otherwise recluster() decides per form, from what is
+    # in the database rather than from what this pass happened to ingest — a
+    # run that ingested and then died still has work waiting.
+    recluster(
+        conn,
+        dry_run=args.dry_run,
+        name_topics=not args.no_name_topics,
+        force=args.cluster_only,
+    )
 
 
 def main() -> None:
