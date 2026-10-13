@@ -336,6 +336,32 @@ def clusterable_points(conn: Connection, form_id: int) -> list[ClusterablePoint]
         return [ClusterablePoint(*row) for row in cur.fetchall()]
 
 
+def has_unclustered(conn: Connection, form_id: int) -> bool:
+    """Is there a point in this form that no clustering run has seen yet?
+
+    processing_status is what separates one from a point the last run did look
+    at and deliberately left out: an outlier is 'unknown' and carries no
+    topic, which is a decision, while 'pending' means no run has considered it.
+    Asking `canonical_topic_id IS NULL` instead would count every outlier as
+    outstanding work and re-cluster on every pass for ever.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM points p
+                JOIN answers a ON a.id = p.answer_id
+                JOIN submissions s ON s.id = a.submission_id
+                WHERE s.form_id = %s
+                  AND p.embedding IS NOT NULL AND p.point_text IS NOT NULL
+                  AND COALESCE(p.processing_status, 'pending') = 'pending'
+            )
+            """,
+            (form_id,),
+        )
+        return cur.fetchone()[0]
+
+
 def existing_topics(conn: Connection, form_id: int) -> dict[int, str]:
     """Live topics of this form, as {id: name}.
 
