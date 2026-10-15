@@ -4,7 +4,7 @@ Every stage persists its output, so nothing needs re-running to analyse it:
 
     decompose   answers.answer_text -> the points.point_text rows under it
     sentiment   points.sentiment_label
-    violation   points.is_severe
+    violation   points.is_violation
     embedding   points.embedding (reported as dimensions, not dumped)
     clustering  points.canonical_topic_id + assignment_confidence
 
@@ -32,7 +32,7 @@ POINTS_SQL = """
            a.answer_text,
            p.point_text,
            p.sentiment_label,
-           p.is_severe,
+           p.is_violation,
            p.canonical_topic_id AS topic_id,
            c.canonical_name     AS topic_name,
            p.assignment_confidence,
@@ -58,7 +58,7 @@ TOPICS_SQL = """
            count(*) FILTER (WHERE p.sentiment_label = 'positive')        AS positive_count,
            count(*) FILTER (WHERE p.sentiment_label = 'neutral')         AS neutral_count,
            count(*) FILTER (WHERE p.sentiment_label = 'negative')        AS negative_count,
-           count(*) FILTER (WHERE p.is_severe)                           AS severe_count
+           count(*) FILTER (WHERE p.is_violation)                           AS violation_count
     FROM canonical_topics c
     LEFT JOIN points p ON p.canonical_topic_id = c.id
     GROUP BY c.id, c.form_id, c.canonical_name, c.representative_keywords
@@ -103,7 +103,7 @@ def build(conn: psycopg.Connection, *, examples: int = 3) -> tuple[str, pd.DataF
 
     sentiment = Counter(points.sentiment_label.fillna("NULL"))
     add(f"sentiment             {dict(sentiment)}")
-    add(f"violation flagged     {int(points.is_severe.fillna(False).sum())}")
+    add(f"violation flagged     {int(points.is_violation.fillna(False).sum())}")
 
     # ── decompose ──
     add("")
@@ -115,7 +115,7 @@ def build(conn: psycopg.Connection, *, examples: int = 3) -> tuple[str, pd.DataF
         add(f"answer {answer_id}  ->  {len(group)} point(s)")
         add(f"  raw: {group.answer_text.iloc[0]}")
         for row in group.itertuples():
-            flag = " [FLAGGED]" if row.is_severe else ""
+            flag = " [FLAGGED]" if row.is_violation else ""
             add(f"   - [{row.sentiment_label or 'NULL':8s}]{flag} {row.point_text}")
 
     # ── clustering ──
@@ -129,7 +129,7 @@ def build(conn: psycopg.Connection, *, examples: int = 3) -> tuple[str, pd.DataF
         add(f"  keywords: {row.keywords}")
         add(
             f"  +{row.positive_count} / ~{row.neutral_count} / -{row.negative_count}"
-            f"   severe {row.severe_count}"
+            f"   violation {row.violation_count}"
         )
         members = points[points.topic_id == row.topic_id].nlargest(
             examples, "assignment_confidence"

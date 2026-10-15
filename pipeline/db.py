@@ -39,7 +39,7 @@ class ClusterablePoint:
     text: str
     embedding: np.ndarray
     sentiment_label: str | None
-    is_severe: bool | None
+    is_violation: bool | None
     created_at: datetime
     # The topic this point belonged to before this run. Carrying it into memory
     # is what lets a re-cluster recognise an old topic by its membership.
@@ -235,7 +235,7 @@ def insert_points(conn: Connection, rows: list[dict]) -> int:
 
     chk_status_topic ties the two columns together: a point is 'assigned'
     exactly when it carries a topic, so a new point is 'pending' with none.
-    chk_labels_together requires sentiment_label and is_severe to be set or
+    chk_labels_together requires sentiment_label and is_violation to be set or
     unset together, which --skip-sentiment satisfies by leaving both NULL."""
     if not rows:
         return 0
@@ -243,9 +243,9 @@ def insert_points(conn: Connection, rows: list[dict]) -> int:
         cur.executemany(
             """
             INSERT INTO points
-                (answer_id, point_text, embedding, sentiment_label, is_severe, processing_status)
+                (answer_id, point_text, embedding, sentiment_label, is_violation, processing_status)
             VALUES (%(answer_id)s, %(point_text)s, %(embedding)s, %(sentiment_label)s,
-                    %(is_severe)s, %(processing_status)s)
+                    %(is_violation)s, %(processing_status)s)
             """,
             rows,
         )
@@ -309,7 +309,7 @@ def update_point_labels(conn: Connection, rows: list[dict]) -> int:
         cur.executemany(
             """
             UPDATE points
-            SET sentiment_label = %(sentiment_label)s, is_severe = %(is_severe)s
+            SET sentiment_label = %(sentiment_label)s, is_violation = %(is_violation)s
             WHERE id = %(id)s
             """,
             rows,
@@ -326,7 +326,7 @@ def update_point_features(conn: Connection, rows: list[dict]) -> int:
             UPDATE points
             SET embedding = %(embedding)s,
                 sentiment_label = COALESCE(%(sentiment_label)s, sentiment_label),
-                is_severe = COALESCE(%(is_severe)s, is_severe),
+                is_violation = COALESCE(%(is_violation)s, is_violation),
                 processing_status = %(processing_status)s
             WHERE id = %(id)s
             """,
@@ -348,7 +348,7 @@ def clusterable_points(conn: Connection, form_id: int) -> list[ClusterablePoint]
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT p.id, p.point_text, p.embedding, p.sentiment_label, p.is_severe,
+            SELECT p.id, p.point_text, p.embedding, p.sentiment_label, p.is_violation,
                    p.created_at, p.canonical_topic_id
             FROM points p
             JOIN answers a ON a.id = p.answer_id

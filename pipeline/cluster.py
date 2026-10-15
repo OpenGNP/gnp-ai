@@ -46,12 +46,12 @@ class ClusterResult:
 
 
 def _counts(members: list[ClusterablePoint]) -> dict[str, int]:
-    tally = {"total": len(members), "positive": 0, "neutral": 0, "negative": 0, "severe": 0}
+    tally = {"total": len(members), "positive": 0, "neutral": 0, "negative": 0, "violation": 0}
     for point in members:
         if point.sentiment_label in ("positive", "neutral", "negative"):
             tally[point.sentiment_label] += 1
-        if point.is_severe:
-            tally["severe"] += 1
+        if point.is_violation:
+            tally["violation"] += 1
     return tally
 
 

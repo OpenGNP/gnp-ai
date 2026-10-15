@@ -88,7 +88,7 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
             texts = [text for _, text in staged]
             vectors = embed.encode(texts, dims)
             labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
-            severities = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
+            violations = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
 
             rows = [
                 {
@@ -96,11 +96,11 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
                     "point_text": text,
                     "embedding": vector,
                     "sentiment_label": sentiment_label,
-                    "is_severe": severe,
+                    "is_violation": violation,
                     "processing_status": "pending",
                 }
-                for (answer_id, text), vector, sentiment_label, severe
-                in zip(staged, vectors, labels, severities)
+                for (answer_id, text), vector, sentiment_label, violation
+                in zip(staged, vectors, labels, violations)
             ]
 
             # db.Connection re-dials between transactions, but one that dies
@@ -148,17 +148,17 @@ def backfill(conn, *, dry_run: bool, skip_sentiment: bool, form_ids: list[int] |
     vectors = embed.encode(texts, db.embedding_dims(conn))
 
     labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
-    severities = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
+    violations = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
 
     rows = [
         {
             "id": point_id,
             "embedding": vector,
             "sentiment_label": label,
-            "is_severe": severe,
+            "is_violation": violation,
             "processing_status": "pending",
         }
-        for (point_id, _), vector, label, severe in zip(missing, vectors, labels, severities)
+        for (point_id, _), vector, label, violation in zip(missing, vectors, labels, violations)
     ]
 
     with conn.transaction():
@@ -182,16 +182,16 @@ def relabel(conn, *, dry_run: bool, form_ids: list[int] | None = None) -> int:
 
     texts = [text for _, text in targets]
     labels = sentiment.classify(texts)
-    severities = violation.flag_zeroshot(texts)
+    violations = violation.flag_zeroshot(texts)
 
     rows = [
-        {"id": point_id, "sentiment_label": label, "is_severe": severe}
-        for (point_id, _), label, severe in zip(targets, labels, severities)
+        {"id": point_id, "sentiment_label": label, "is_violation": violation}
+        for (point_id, _), label, violation in zip(targets, labels, violations)
     ]
     with conn.transaction():
         db.update_point_labels(conn, rows)
 
-    _log(f"relabel: updated {len(rows)} point(s), {sum(1 for r in rows if r['is_severe'])} flagged")
+    _log(f"relabel: updated {len(rows)} point(s), {sum(1 for r in rows if r['is_violation'])} flagged")
     return len(rows)
 
 

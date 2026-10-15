@@ -2,8 +2,7 @@
 
 unitary/toxic-bert is multi-label (toxic, severe_toxic, obscene, threat, insult,
 identity_hate). A point is flagged when any label clears the threshold, which
-maps onto the single boolean the schema offers: points.is_severe, counted by
-/api/analytics/summary as severeIssues.
+maps onto the single boolean the schema offers: points.is_violation.
 
 Note what this does and does not measure: it detects abusive or offensive
 *language*, not how serious the *problem being reported* is. "The lab has no
