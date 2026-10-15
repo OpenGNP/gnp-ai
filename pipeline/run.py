@@ -298,7 +298,7 @@ def cluster_form(
     None if nothing was written (too few points, or stopped before the write)."""
     started = datetime.now(timezone.utc)
     points = db.clusterable_points(conn, form_id)
-    if len(points) < cluster_mod.MIN_POINTS:
+    if len(points) < config.CLUSTER_QUIET_MIN:
         _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), too few, skipped")
         return None
 

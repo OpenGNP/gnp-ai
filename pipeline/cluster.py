@@ -20,10 +20,6 @@ from scripts.cluster_points import fit, reduce_outliers, split_large_topics, top
 from . import config
 from .db import ClusterablePoint, as_array
 
-# UMAP reduces to 5 components; below roughly this many points the projection is
-# meaningless and HDBSCAN has nothing to find.
-MIN_POINTS = 10
-
 
 @dataclass
 class TopicDraft:
@@ -56,9 +52,9 @@ def _counts(members: list[ClusterablePoint]) -> dict[str, int]:
 
 
 def cluster(points: list[ClusterablePoint]) -> ClusterResult:
-    if len(points) < MIN_POINTS:
+    if len(points) < config.CLUSTER_QUIET_MIN:
         raise SystemExit(
-            f"only {len(points)} embedded points — need at least {MIN_POINTS} to cluster. "
+            f"only {len(points)} embedded points — need at least {config.CLUSTER_QUIET_MIN} to cluster. "
             "Ingest more submissions, or run with --backfill to bring the existing points in."
         )
 
