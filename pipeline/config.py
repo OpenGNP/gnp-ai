@@ -23,6 +23,13 @@ DB_SCHEMA = os.environ.get("DB_SCHEMA", "test")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 DECOMPOSE_MODEL = os.environ.get("DECOMPOSE_MODEL", "mistral:7b-instruct")
 DECOMPOSE_PROMPT = os.environ.get("DECOMPOSE_PROMPT", "v1")
+
+# Longest answer that bypasses decomposition when it holds no clause break.
+# Measured on the ingested corpus: no answer of two to six words ever split
+# into more than one point, while answers of seven to ten did — eleven of
+# fifty-two. See pipeline/decompose.py:needs_splitting for why the model must
+# not see these at all.
+SHORT_ANSWER_WORDS = int(os.environ.get("SHORT_ANSWER_WORDS", "6"))
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 SENTIMENT_MODEL = os.environ.get(
     "SENTIMENT_MODEL", "cardiffnlp/twitter-roberta-base-sentiment-latest"
