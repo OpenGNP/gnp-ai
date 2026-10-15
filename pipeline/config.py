@@ -16,9 +16,12 @@ load_dotenv(ROOT / ".env")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
-# The server moved its tables into the "test" Postgres schema (see
-# gnp-server/src/db/schema.ts: pgSchema("test")); "public" is a stale copy.
-DB_SCHEMA = os.environ.get("DB_SCHEMA", "test")
+# The server's tables live in "public" — gnp-server/src/db/schema.ts declares
+# them with pgTable and no schema. A "test" schema still exists in the
+# database from an earlier move, holding stale copies of all twelve tables, so
+# the default matters: pointed there the pipeline would read and write real
+# rows and report nothing wrong.
+DB_SCHEMA = os.environ.get("DB_SCHEMA", "public")
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 DECOMPOSE_MODEL = os.environ.get("DECOMPOSE_MODEL", "mistral:7b-instruct")

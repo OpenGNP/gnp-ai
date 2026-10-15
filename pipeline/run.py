@@ -226,7 +226,24 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
         started = datetime.now(timezone.utc)
         points = db.clusterable_points(conn, form_id)
         if len(points) < cluster_mod.MIN_POINTS:
-            _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), too few, skipped")
+            # Too few to cluster, but they have been considered, and leaving
+            # them 'pending' makes the dashboard report the form as never
+            # analysed and show nothing at all. Marked 'unknown' they appear
+            # as uncategorised, which is what they are. They are not lost to
+            # clustering: clusterable_points reads every embedded point
+            # whatever its status, so once enough arrive these join the run.
+            if not dry_run and points:
+                with conn.transaction():
+                    db.assign_points(
+                        conn,
+                        [
+                            {"id": p.id, "topic_id": None, "confidence": None,
+                             "processing_status": "unknown"}
+                            for p in points
+                        ],
+                    )
+            _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), "
+                 "too few to cluster, left uncategorised")
             continue
 
         _log(f"cluster: form {form_id} · {form_title} — {len(points)} embedded point(s)")
