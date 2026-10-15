@@ -186,18 +186,22 @@ def analysable_forms(conn: Connection) -> list[tuple[int, str]]:
 def pending_answers(
     conn: Connection, field_id: int, limit: int | None = None
 ) -> list[tuple[int, str]]:
-    """Free-text answers with no points row yet.
+    """Free-text answers decomposition has not read yet.
+
+    decomposed_at is the marker, not "has no points row". The two agree
+    almost always, but an answer the model found no point in would have no
+    row either, and would be re-read on every run for ever. The predicate is
+    written to match idx_answers_to_decompose.
 
     Radio/checkbox answers store answer_option_id and leave answer_text NULL,
-    so the NOT NULL filter skips them without needing to join form_fields.
+    so the NOT NULL filter skips them without joining form_fields.
     """
     sql = """
         SELECT a.id, a.answer_text
         FROM answers a
-        LEFT JOIN points p ON p.answer_id = a.id
-        WHERE a.field_id = %s
-          AND a.answer_text IS NOT NULL AND btrim(a.answer_text) <> ''
-          AND p.id IS NULL
+        WHERE a.decomposed_at IS NULL AND a.answer_text IS NOT NULL
+          AND a.field_id = %s
+          AND btrim(a.answer_text) <> ''
         ORDER BY a.id
     """
     if limit:
@@ -207,10 +211,32 @@ def pending_answers(
         return [(row[0], row[1]) for row in cur.fetchall()]
 
 
+def mark_decomposed(conn: Connection, answer_ids: list[int]) -> int:
+    """Record that decomposition has read these answers.
+
+    Called in the same transaction as the points they produced, so the two
+    can never disagree — and it covers an answer that yielded no point at
+    all, which is the case a "has no points row" test would retry for ever.
+    """
+    if not answer_ids:
+        return 0
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE answers SET decomposed_at = now() WHERE id = ANY(%s)",
+            (answer_ids,),
+        )
+        return cur.rowcount
+
+
 def insert_points(conn: Connection, rows: list[dict]) -> int:
     """processing_status is constrained by chk_processing to
     pending | assigned | unknown | clustered, and sentiment_label by
-    chk_sentiment to positive | neutral | negative (NULL allowed)."""
+    chk_sentiment to positive | neutral | negative (NULL allowed).
+
+    chk_status_topic ties the two columns together: a point is 'assigned'
+    exactly when it carries a topic, so a new point is 'pending' with none.
+    chk_labels_together requires sentiment_label and is_severe to be set or
+    unset together, which --skip-sentiment satisfies by leaving both NULL."""
     if not rows:
         return 0
     with conn.cursor() as cur:
@@ -363,48 +389,47 @@ def has_unclustered(conn: Connection, form_id: int) -> bool:
 
 
 def existing_topics(conn: Connection, form_id: int) -> dict[int, str]:
-    """Live topics of this form, as {id: name}.
+    """Topics of this form a new group could inherit, as {id: name}.
 
-    There is no ownership marker any more: `canonical_topics.form_id` scopes a
-    run to its own form, so a run can only ever replace topics it is
-    responsible for. Topics already retired — absorbed by a merge, or archived
-    when nothing claimed them — are left out: a new group can only inherit
-    from a topic that is still live.
+    There is no ownership marker: `canonical_topics.form_id` scopes a run to
+    its own form, so a run can only ever replace topics it is responsible for.
+    Nor is there a status to filter on any more — a topic that stops holding
+    points is deleted at the end of the run that emptied it, so every row
+    here is live by construction.
     """
     with conn.cursor() as cur:
         cur.execute(
-            """
-            SELECT id, canonical_name FROM canonical_topics
-            WHERE form_id = %s
-              AND COALESCE(status, 'active') NOT IN ('merged', 'archived')
-            """,
+            "SELECT id, canonical_name FROM canonical_topics WHERE form_id = %s",
             (form_id,),
         )
         return {row[0]: row[1] for row in cur.fetchall()}
 
 
-def archive_topics(conn: Connection, topic_ids: list[int]) -> int:
-    """Retire a topic no new group claimed, without destroying it.
+def delete_empty_topics(conn: Connection, form_id: int) -> int:
+    """Drop this form's topics that no point belongs to any more.
 
-    The dashboard only reads status='active', so archiving hides the topic
-    exactly as deleting did — but the row survives, and with it the name the
-    issue was reported under and the created_at that says when it first
-    appeared. A delete threw both away for nothing: the points are reassigned
-    in the same transaction either way, so nothing is freed.
+    Run after the assignments, inside the same transaction, so it sees the
+    final membership. It covers both ways a topic can end: absorbed by
+    another group, or dissolved because its members scattered. The schema
+    used to record which, in status and merged_into_id; without those columns
+    an emptied row would simply show on the dashboard as a card with nothing
+    in it, since the server returns every topic it finds.
 
-    Unlike a merge there is no survivor to point at: merged_into_id stays NULL
-    because the members did not go anywhere identifiable.
+    Little is lost with them. A trend is grouped by the topic its points
+    carry now, so when one topic absorbs another the survivor's line already
+    includes the absorbed points at their original dates — the history lives
+    in the points, not in the row.
     """
-    if not topic_ids:
-        return 0
     with conn.cursor() as cur:
         cur.execute(
             """
-            UPDATE canonical_topics
-            SET status = 'archived', updated_at = now()
-            WHERE id = ANY(%s)
+            DELETE FROM canonical_topics t
+            WHERE t.form_id = %s
+              AND NOT EXISTS (
+                  SELECT 1 FROM points p WHERE p.canonical_topic_id = t.id
+              )
             """,
-            (topic_ids,),
+            (form_id,),
         )
         return cur.rowcount
 
@@ -418,22 +443,19 @@ def insert_topic(
     keywords: str,
     centroid: np.ndarray,
     size: int,
-    field_id: int | None = None,
 ) -> int:
-    """field_id stays NULL for a topic the pipeline creates: its members come
-    from every analysed question of the form, so naming one of them would be
-    wrong. The column is nullable and the server only ever filters on form_id
-    (idx_canonical_topics_form_status), so nothing downstream depends on it."""
+    """A topic belongs to a form, not to one of its questions: its members
+    come from every field the form marked for analysis."""
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO canonical_topics
-                (form_id, field_id, canonical_name, canonical_summary,
-                 representative_keywords, centroid_vector, topic_size, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active')
+                (form_id, canonical_name, canonical_summary,
+                 representative_keywords, centroid_vector, topic_size)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (form_id, field_id, name, summary, keywords, centroid, size),
+            (form_id, name, summary, keywords, centroid, size),
         )
         return cur.fetchone()[0]
 
@@ -458,29 +480,11 @@ def update_topic(
             SET canonical_name = %s,
                 canonical_summary = COALESCE(%s, canonical_summary),
                 representative_keywords = %s, centroid_vector = %s,
-                topic_size = %s, status = 'active', updated_at = now()
+                topic_size = %s, updated_at = now()
             WHERE id = %s
             """,
             (name, summary, keywords, centroid, size, topic_id),
         )
-
-
-def mark_topics_merged(conn: Connection, absorbed: dict[int, int]) -> int:
-    """A topic absorbed by another is retired, not deleted, and now records
-    where it went: merged_into_id is the column the schema added for exactly
-    this. Deleting it would take its points' history with it."""
-    if not absorbed:
-        return 0
-    with conn.cursor() as cur:
-        cur.executemany(
-            """
-            UPDATE canonical_topics
-            SET status = 'merged', merged_into_id = %(into)s, updated_at = now()
-            WHERE id = %(id)s
-            """,
-            [{"id": old, "into": new} for old, new in absorbed.items()],
-        )
-        return len(absorbed)
 
 
 def assign_points(conn: Connection, rows: list[dict]) -> int:

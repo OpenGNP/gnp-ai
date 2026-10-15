@@ -106,13 +106,18 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
             # db.Connection re-dials between transactions, but one that dies
             # mid-write has to fail — so retry the chunk once on a fresh
             # connection rather than lose the decomposition behind it.
+            # Every answer in the chunk is marked, including any the model
+            # found no point in, so the next run does not read it again.
+            answer_ids = [answer_id for answer_id, _ in batch]
             try:
                 with conn.transaction():
                     db.insert_points(conn, rows)
+                    db.mark_decomposed(conn, answer_ids)
             except psycopg.OperationalError as exc:
                 _log(f"  write failed ({exc.__class__.__name__}), retrying on a new connection")
                 with conn.transaction():
                     db.insert_points(conn, rows)
+                    db.mark_decomposed(conn, answer_ids)
 
             written += len(rows)
             field_points += len(rows)
@@ -240,7 +245,7 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
         _log(
             f"  identity: carried {counts['carried']} · new {counts['new']} · "
             f"split {counts['split']} · merged {counts['merged']} · "
-            f"archived {counts['archived']}"
+            f"dissolved {counts['dissolved']}"
         )
         for event in plan.events[:8]:
             _log(f"    {event}")
@@ -272,9 +277,6 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
             continue
 
         with conn.transaction():
-            archived = db.archive_topics(conn, plan.archived)
-            db.mark_topics_merged(conn, plan.merged)
-
             assignments: list[dict] = []
             for topic in result.topics:
                 carried = plan.reuse.get(topic.key)
@@ -315,8 +317,11 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
                 )
 
             db.assign_points(conn, assignments)
-            # An unclustered point is simply one with no topic; the
-            # unassigned_points table it used to be mirrored into is gone.
+            # An outlier keeps no topic and is marked 'unknown': the pipeline
+            # looked at it and it fitted nowhere, which is a different thing
+            # from 'pending', where no run has considered it yet. Grouping
+            # these for the dashboard is the server's to do — they are found
+            # by status, not by the NULL topic a pending point also has.
             db.assign_points(
                 conn,
                 [
@@ -325,6 +330,12 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
                     for p in result.outliers
                 ],
             )
+
+            # Once every point has been placed, a topic holding none is over:
+            # absorbed by another group, or dissolved. Dropped here rather
+            # than from plan.merged / plan.dissolved, so a row left behind by
+            # an earlier run goes with it.
+            dropped = db.delete_empty_topics(conn, form_id)
 
             db.record_run(
                 conn,
@@ -343,7 +354,7 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
 
         _log(
             f"  carried {counts['carried']}, added {counts['new']}, "
-            f"merged {counts['merged']}, archived {archived}"
+            f"merged {counts['merged']}, dropped {dropped}"
         )
         total_topics += len(result.topics)
 

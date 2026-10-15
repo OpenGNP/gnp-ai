@@ -70,8 +70,8 @@ TOPIC_CARRY_MIN = float(os.environ.get("TOPIC_CARRY_MIN", "0.50"))
 TOPIC_SPLIT_MIN = float(os.environ.get("TOPIC_SPLIT_MIN", "0.20"))
 
 # Recorded as ai_model_runs.model_version so a run can be traced back to the
-# code that produced it. It is no longer an ownership marker: topic_versions is
-# gone, and canonical_topics.field_id scopes a run to its own field instead.
+# code that produced it. It is not an ownership marker: canonical_topics.form_id
+# already scopes a run to the topics it is responsible for.
 PIPELINE_TAG = "pipeline:gnp-ai"
 
 

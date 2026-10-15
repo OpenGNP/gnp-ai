@@ -39,9 +39,10 @@ class IdentityPlan:
     # absorbed topic id -> surviving topic id
     merged: dict[int, int] = field(default_factory=dict)
     # old topics no group claimed and no survivor absorbed: their members
-    # left the corpus or dispersed past recognition. Archived, never
-    # deleted — the row is the only record that the issue was ever raised.
-    archived: list[int] = field(default_factory=list)
+    # scattered past recognition. Reported apart from `merged` because the
+    # two mean different things about the data, even though the row ends the
+    # same way — emptied, and dropped by the caller.
+    dissolved: list[int] = field(default_factory=list)
     events: list[str] = field(default_factory=list)
     # how many groups this run produced, so `new` can be counted rather than
     # inferred from the event log, which carries notes as well as decisions
@@ -63,7 +64,7 @@ class IdentityPlan:
             "new": self.drafts - len(self.reuse),
             "split": sum(1 for e in self.events if e.startswith("split:")),
             "merged": len(self.merged),
-            "archived": len(self.archived),
+            "dissolved": len(self.dissolved),
         }
 
 
@@ -166,8 +167,8 @@ def resolve(
         if len(children) > 1:
             plan.events.append(f"split:{old_id} -> {', '.join(children)}")
         if old_id not in plan.reuse.values() and old_id not in plan.merged:
-            plan.archived.append(old_id)
-            plan.events.append(f"archived:{old_id} ({known_topics.get(old_id, '?')})")
+            plan.dissolved.append(old_id)
+            plan.events.append(f"dissolved:{old_id} ({known_topics.get(old_id, '?')})")
 
     for draft in result.topics:
         if draft.key not in plan.reuse:

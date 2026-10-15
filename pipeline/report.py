@@ -52,7 +52,6 @@ POINTS_SQL = """
 TOPICS_SQL = """
     SELECT c.id   AS topic_id,
            c.form_id,
-           c.field_id,
            c.canonical_name          AS topic_name,
            c.representative_keywords AS keywords,
            count(p.id)                                                   AS feedback_count,
@@ -62,8 +61,7 @@ TOPICS_SQL = """
            count(*) FILTER (WHERE p.is_severe)                           AS severe_count
     FROM canonical_topics c
     LEFT JOIN points p ON p.canonical_topic_id = c.id
-    WHERE COALESCE(c.status, 'active') NOT IN ('merged', 'archived')
-    GROUP BY c.id, c.form_id, c.field_id, c.canonical_name, c.representative_keywords
+    GROUP BY c.id, c.form_id, c.canonical_name, c.representative_keywords
 """
 
 
