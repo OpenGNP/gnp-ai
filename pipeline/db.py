@@ -117,6 +117,54 @@ def connect() -> Connection:
     return Connection()
 
 
+class StageLock:
+    """One process per stage across every machine, so two ingests never
+    decompose the same answer. A Postgres advisory lock on its own connection:
+    the main Connection re-dials, and a new session has lost its locks."""
+
+    # "gnp" in ASCII; the second key picks the stage.
+    _NAMESPACE = 0x676E70
+    _STAGES = {"ingest": 1, "cluster": 2}
+
+    def __init__(self, stage: str) -> None:
+        self.stage = stage
+        self._key = self._STAGES[stage]
+        self._conn: psycopg.Connection | None = None
+
+    def acquire(self) -> bool:
+        self.release()
+        try:
+            conn = psycopg.connect(config.require_database_url(), autocommit=True)
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_try_advisory_lock(%s, %s)", (self._NAMESPACE, self._key))
+                got = bool(cur.fetchone()[0])
+        except psycopg.Error:
+            return False
+        if got:
+            self._conn = conn
+        else:
+            conn.close()
+        return got
+
+    def held(self) -> bool:
+        if self._conn is not None and not self._conn.closed:
+            try:
+                with self._conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                return True
+            except psycopg.Error:
+                pass
+        return self.acquire()
+
+    def release(self) -> None:
+        if self._conn is not None:
+            try:
+                self._conn.close()  # releases the lock
+            except psycopg.Error:
+                pass
+            self._conn = None
+
+
 def embedding_dims(conn: Connection) -> int | None:
     """Dimension the points.embedding column is declared with, or None when the
     column is unconstrained. pgvector rejects any other width, so the encoder
@@ -386,6 +434,55 @@ def has_unclustered(conn: Connection, form_id: int) -> bool:
             (form_id,),
         )
         return cur.fetchone()[0]
+
+
+@dataclass
+class Readiness:
+    """Ages come from the database clock, not the worker's."""
+
+    pending: int                  # points no clustering run has seen
+    backlog: int                  # analysed answers not decomposed yet
+    newest_age_min: float | None
+    oldest_age_min: float | None
+
+
+def cluster_readiness(conn: Connection, form_id: int) -> Readiness:
+    """backlog uses the same filter as pending_answers()."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM points p
+                 JOIN answers a ON a.id = p.answer_id
+                 JOIN submissions s ON s.id = a.submission_id
+                 WHERE s.form_id = %(form)s
+                   AND p.embedding IS NOT NULL AND p.point_text IS NOT NULL
+                   AND COALESCE(p.processing_status, 'pending') = 'pending'),
+                (SELECT count(*) FROM answers a
+                 JOIN submissions s ON s.id = a.submission_id
+                 JOIN form_fields f ON f.id = a.field_id
+                 WHERE s.form_id = %(form)s
+                   AND f.analyze_with_ai IS TRUE AND f.deleted_at IS NULL
+                   AND a.decomposed_at IS NULL AND a.answer_text IS NOT NULL
+                   AND btrim(a.answer_text) <> ''),
+                extract(epoch FROM now() - max(p.created_at)) / 60,
+                extract(epoch FROM now() - min(p.created_at)) / 60
+            FROM points p
+            JOIN answers a ON a.id = p.answer_id
+            JOIN submissions s ON s.id = a.submission_id
+            WHERE s.form_id = %(form)s
+              AND p.embedding IS NOT NULL AND p.point_text IS NOT NULL
+              AND COALESCE(p.processing_status, 'pending') = 'pending'
+            """,
+            {"form": form_id},
+        )
+        pending, backlog, newest, oldest = cur.fetchone()
+    return Readiness(
+        pending=int(pending),
+        backlog=int(backlog),
+        newest_age_min=float(newest) if newest is not None else None,
+        oldest_age_min=float(oldest) if oldest is not None else None,
+    )
 
 
 def existing_topics(conn: Connection, form_id: int) -> dict[int, str]:

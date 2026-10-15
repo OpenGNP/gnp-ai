@@ -29,13 +29,14 @@ from pathlib import Path
 
 # anaconda บน macOS มี libomp คนละตัวกับที่ numba/hdbscan โหลด ต้องตั้งก่อน import
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+# เฉพาะตอนรันเป็นสคริปต์ — pipeline/ import ไฟล์นี้ และไม่ควรโดนจำกัด thread/ปิด warning
+if __name__ == "__main__":
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    warnings.filterwarnings("ignore")
 
 import numpy as np
 import pandas as pd
-
-warnings.filterwarnings("ignore")
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"

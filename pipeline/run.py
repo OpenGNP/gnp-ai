@@ -11,7 +11,7 @@ The server and client are never touched; they read these tables already.
     python -m pipeline.run --once            # both halves, one pass
     python -m pipeline.run --ingest-only     # new answers only
     python -m pipeline.run --cluster-only    # re-cluster what is already in points
-    python -m pipeline.run --watch 60        # poll every 60s (demo stand-in for cron)
+    python -m pipeline.run --watch 60        # poll every 60s (pipeline.worker in production)
     python -m pipeline.run --once --dry-run  # report what would happen, write nothing
     python -m pipeline.run --report          # what every stage produced, read-only
 """
@@ -22,8 +22,10 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 
+import httpx
 import numpy as np
 import psycopg
 
@@ -46,21 +48,45 @@ def _log(message: str) -> None:
 # a rerun picks up exactly what did not land.
 CHUNK = 20
 
+# Failed decompose attempts per answer id; in memory, reset on restart.
+_attempts: dict[int, int] = {}
 
-def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> int:
+# Ollama is down: stop the pass rather than count an attempt against every answer.
+_UNREACHABLE = (httpx.ConnectError, httpx.ConnectTimeout)
+
+
+def _never() -> bool:
+    return False
+
+
+def ingest(
+    conn,
+    *,
+    limit: int | None,
+    dry_run: bool,
+    skip_sentiment: bool,
+    stop: Callable[[], bool] = _never,
+    log_idle: bool = True,
+) -> int:
     """Decompose every answer the form asked to have analysed.
 
     Scope comes from form_fields.analyze_with_ai, so a form's demographic
     questions and anything the author excluded are never read.
+
+    `limit` is per field, so limit=CHUNK takes one chunk from each field in
+    turn. `stop` is checked between answers; what is done by then is written.
     """
     fields = db.analysable_fields(conn)
     if not fields:
-        _log("ingest: no field is marked analyze_with_ai")
+        if log_idle:
+            _log("ingest: no field is marked analyze_with_ai")
         return 0
 
     dims = db.embedding_dims(conn)
     written = 0
     for form_id, field_id, label in fields:
+        if stop():
+            break
         pending = db.pending_answers(conn, field_id, limit)
         if not pending:
             continue
@@ -71,19 +97,45 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
 
         done = 0
         field_points = 0
+        unreachable: Exception | None = None
         for start in range(0, len(pending), CHUNK):
+            if stop():
+                break
             batch = pending[start : start + CHUNK]
 
             # The classifiers are fast CPU models that prefer a batch, so they
             # run once per chunk rather than once per answer.
             staged: list[tuple[int, str]] = []
+            read: list[int] = []
             with llm.client() as http:
                 for answer_id, text in batch:
-                    points, status = decompose.decompose(http, text)
+                    if stop():
+                        break
+                    try:
+                        points, status = decompose.decompose(http, text)
+                    except _UNREACHABLE as exc:
+                        unreachable = exc
+                        break
+                    except httpx.HTTPError as exc:
+                        # Left unmarked so the next pass retries it, up to
+                        # DECOMPOSE_MAX_ATTEMPTS; then kept whole.
+                        tries = _attempts[answer_id] = _attempts.get(answer_id, 0) + 1
+                        if tries < config.DECOMPOSE_MAX_ATTEMPTS:
+                            _log(f"  answer {answer_id}: {exc.__class__.__name__}, "
+                                 f"attempt {tries}/{config.DECOMPOSE_MAX_ATTEMPTS}")
+                            continue
+                        points, status = [text.strip()], "decompose_gave_up"
+                    _attempts.pop(answer_id, None)
                     staged.extend((answer_id, point) for point in points)
+                    read.append(answer_id)
                     done += 1
                     _log(f"  [{done}/{len(pending)}] answer {answer_id} "
                          f"-> {len(points)} point(s) [{status}]")
+
+            if not read:
+                if unreachable is not None:
+                    raise unreachable
+                continue
 
             texts = [text for _, text in staged]
             vectors = embed.encode(texts, dims)
@@ -106,27 +158,29 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
             # db.Connection re-dials between transactions, but one that dies
             # mid-write has to fail — so retry the chunk once on a fresh
             # connection rather than lose the decomposition behind it.
-            # Every answer in the chunk is marked, including any the model
-            # found no point in, so the next run does not read it again.
-            answer_ids = [answer_id for answer_id, _ in batch]
+            # Mark every answer read, even one with no points; not those awaiting a retry.
             try:
                 with conn.transaction():
                     db.insert_points(conn, rows)
-                    db.mark_decomposed(conn, answer_ids)
+                    db.mark_decomposed(conn, read)
             except psycopg.OperationalError as exc:
                 _log(f"  write failed ({exc.__class__.__name__}), retrying on a new connection")
                 with conn.transaction():
                     db.insert_points(conn, rows)
-                    db.mark_decomposed(conn, answer_ids)
+                    db.mark_decomposed(conn, read)
 
             written += len(rows)
             field_points += len(rows)
 
-        _log(f"ingest: form {form_id} · {label} — wrote {field_points} point(s)")
+            if unreachable is not None:
+                raise unreachable
+
+        if field_points:
+            _log(f"ingest: form {form_id} · {label} — wrote {field_points} point(s)")
 
     if dry_run:
         _log("ingest: dry run, nothing written")
-    elif not written:
+    elif not written and log_idle:
         _log("ingest: no unprocessed answers")
     return written
 
@@ -222,148 +276,193 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
         if not force and not db.has_unclustered(conn, form_id):
             _log(f"cluster: form {form_id} · {form_title} — no new points, skipped")
             continue
-
-        started = datetime.now(timezone.utc)
-        points = db.clusterable_points(conn, form_id)
-        if len(points) < cluster_mod.MIN_POINTS:
-            _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), too few, skipped")
-            continue
-
-        _log(f"cluster: form {form_id} · {form_title} — {len(points)} embedded point(s)")
-        result = cluster_mod.cluster(points)
-        _log(
-            f"  {len(result.topics)} topic(s), {len(result.outliers)} outlier(s) "
-            f"(mcs={result.min_cluster_size})"
-        )
-
-        # Which of these groups are topics we already know? Resolved from
-        # membership before anything is written, because the first write would
-        # overwrite the very assignments the answer depends on.
-        known = db.existing_topics(conn, form_id)
-        plan = identity.resolve(points, result, known)
-        counts = plan.summary()
-        _log(
-            f"  identity: carried {counts['carried']} · new {counts['new']} · "
-            f"split {counts['split']} · merged {counts['merged']} · "
-            f"dissolved {counts['dissolved']}"
-        )
-        for event in plan.events[:8]:
-            _log(f"    {event}")
-
-        # A carried topic keeps the title the dashboard already shows: the
-        # same issue with more people reporting it is still the same issue,
-        # and renaming it every run would make the trend unreadable.
-        #
-        # Absorbing another topic is the exception. The scope genuinely
-        # widened, so the old title stops covering what is in the group —
-        # "Inadequate Monitor Equipment" kept its name after swallowing "LX
-        # Building Facilities" and growing from 16 points to 144, by which
-        # point it was about room equipment generally. The merges already
-        # recorded say which topics those are, so no new threshold is needed.
-        absorbed = plan.widened()
-        titles: dict[str, tuple[str | None, str | None]] = {}
-        unnamed = [t for t in result.topics if t.key not in plan.reuse or t.key in absorbed]
-        if name_topics and not dry_run and unnamed:
-            renamed = sum(1 for t in unnamed if t.key in absorbed)
-            _log(f"  naming {len(unnamed) - renamed} new topic(s)"
-                 + (f", renaming {renamed} that absorbed another" if renamed else ""))
-            with llm.client() as http:
-                for topic in unnamed:
-                    title, summary = naming.name_topic(http, topic.keywords, topic.member_texts)
-                    titles[topic.key] = (title, summary)
-
-        if dry_run:
-            total_topics += len(result.topics)
-            continue
-
-        with conn.transaction():
-            assignments: list[dict] = []
-            for topic in result.topics:
-                carried = plan.reuse.get(topic.key)
-                if carried is not None:
-                    topic_id = carried
-                    # titles only holds an entry for a carried topic that
-                    # absorbed another; everything else keeps its old name.
-                    title, summary = titles.get(topic.key, (None, None))
-                    db.update_topic(
-                        conn,
-                        topic_id,
-                        name=title or known[topic_id],
-                        summary=summary,
-                        keywords=topic.keywords,
-                        centroid=topic.centroid,
-                        size=topic.counts["total"],
-                    )
-                else:
-                    title, summary = titles.get(topic.key, (None, None))
-                    topic_id = db.insert_topic(
-                        conn,
-                        form_id=form_id,
-                        name=title or topic.name,
-                        summary=summary,
-                        keywords=topic.keywords,
-                        centroid=topic.centroid,
-                        size=topic.counts["total"],
-                    )
-
-                assignments.extend(
-                    {
-                        "id": point_id,
-                        "topic_id": topic_id,
-                        "confidence": confidence,
-                        "processing_status": "assigned",
-                    }
-                    for point_id, confidence in topic.members
-                )
-
-            db.assign_points(conn, assignments)
-            # An outlier keeps no topic and is marked 'unknown': the pipeline
-            # looked at it and it fitted nowhere, which is a different thing
-            # from 'pending', where no run has considered it yet. Grouping
-            # these for the dashboard is the server's to do — they are found
-            # by status, not by the NULL topic a pending point also has.
-            db.assign_points(
-                conn,
-                [
-                    {"id": p.id, "topic_id": None, "confidence": None,
-                     "processing_status": "unknown"}
-                    for p in result.outliers
-                ],
-            )
-
-            # Once every point has been placed, a topic holding none is over:
-            # absorbed by another group, or dissolved. Dropped here rather
-            # than from plan.merged / plan.dissolved, so a row left behind by
-            # an earlier run goes with it.
-            dropped = db.delete_empty_topics(conn, form_id)
-
-            db.record_run(
-                conn,
-                form_id=form_id,
-                parameters=json.dumps({
-                    "identity": counts,
-                    "carry_min": config.TOPIC_CARRY_MIN,
-                    "min_cluster_size": result.min_cluster_size,
-                    "outlier_threshold": config.OUTLIER_THRESHOLD,
-                    "n_points": len(points),
-                    "n_topics": len(result.topics),
-                }),
-                started_at=started,
-                completed_at=datetime.now(timezone.utc),
-            )
-
-        _log(
-            f"  carried {counts['carried']}, added {counts['new']}, "
-            f"merged {counts['merged']}, dropped {dropped}"
-        )
-        total_topics += len(result.topics)
+        total_topics += cluster_form(
+            conn, form_id, form_title, dry_run=dry_run, name_topics=name_topics
+        ) or 0
 
     if dry_run:
         _log(f"cluster: dry run — {total_topics} topic(s) across {len(forms)} form(s), nothing written")
     return total_topics
 
 
+def cluster_form(
+    conn,
+    form_id: int,
+    form_title: str,
+    *,
+    dry_run: bool,
+    name_topics: bool = True,
+    stop: Callable[[], bool] = _never,
+) -> int | None:
+    """Re-cluster one form in one transaction. Returns the topic count, or
+    None if nothing was written (too few points, or stopped before the write)."""
+    started = datetime.now(timezone.utc)
+    points = db.clusterable_points(conn, form_id)
+    if len(points) < cluster_mod.MIN_POINTS:
+        _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), too few, skipped")
+        return None
+
+    _log(f"cluster: form {form_id} · {form_title} — {len(points)} embedded point(s)")
+    result = cluster_mod.cluster(points)
+    _log(
+        f"  {len(result.topics)} topic(s), {len(result.outliers)} outlier(s) "
+        f"(mcs={result.min_cluster_size})"
+    )
+
+    # Which of these groups are topics we already know? Resolved from
+    # membership before anything is written, because the first write would
+    # overwrite the very assignments the answer depends on.
+    known = db.existing_topics(conn, form_id)
+    plan = identity.resolve(points, result, known)
+    counts = plan.summary()
+    _log(
+        f"  identity: carried {counts['carried']} · new {counts['new']} · "
+        f"split {counts['split']} · merged {counts['merged']} · "
+        f"dissolved {counts['dissolved']}"
+    )
+    for event in plan.events[:8]:
+        _log(f"    {event}")
+
+    # A carried topic keeps the title the dashboard already shows: the
+    # same issue with more people reporting it is still the same issue,
+    # and renaming it every run would make the trend unreadable.
+    #
+    # Absorbing another topic is the exception. The scope genuinely
+    # widened, so the old title stops covering what is in the group —
+    # "Inadequate Monitor Equipment" kept its name after swallowing "LX
+    # Building Facilities" and growing from 16 points to 144, by which
+    # point it was about room equipment generally. The merges already
+    # recorded say which topics those are, so no new threshold is needed.
+    absorbed = plan.widened()
+    titles: dict[str, tuple[str | None, str | None]] = {}
+    unnamed = [t for t in result.topics if t.key not in plan.reuse or t.key in absorbed]
+    if name_topics and not dry_run and unnamed:
+        renamed = sum(1 for t in unnamed if t.key in absorbed)
+        _log(f"  naming {len(unnamed) - renamed} new topic(s)"
+             + (f", renaming {renamed} that absorbed another" if renamed else ""))
+        with llm.client() as http:
+            for topic in unnamed:
+                if stop():
+                    _log("  stopping before the write; form left unchanged")
+                    return None
+                title, summary = naming.name_topic(http, topic.keywords, topic.member_texts)
+                titles[topic.key] = (title, summary)
+
+    if dry_run:
+        return len(result.topics)
+
+    with conn.transaction():
+        assignments: list[dict] = []
+        for topic in result.topics:
+            carried = plan.reuse.get(topic.key)
+            if carried is not None:
+                topic_id = carried
+                # titles only holds an entry for a carried topic that
+                # absorbed another; everything else keeps its old name.
+                title, summary = titles.get(topic.key, (None, None))
+                db.update_topic(
+                    conn,
+                    topic_id,
+                    name=title or known[topic_id],
+                    summary=summary,
+                    keywords=topic.keywords,
+                    centroid=topic.centroid,
+                    size=topic.counts["total"],
+                )
+            else:
+                title, summary = titles.get(topic.key, (None, None))
+                topic_id = db.insert_topic(
+                    conn,
+                    form_id=form_id,
+                    name=title or topic.name,
+                    summary=summary,
+                    keywords=topic.keywords,
+                    centroid=topic.centroid,
+                    size=topic.counts["total"],
+                )
+
+            assignments.extend(
+                {
+                    "id": point_id,
+                    "topic_id": topic_id,
+                    "confidence": confidence,
+                    "processing_status": "assigned",
+                }
+                for point_id, confidence in topic.members
+            )
+
+        db.assign_points(conn, assignments)
+        # An outlier keeps no topic and is marked 'unknown': the pipeline
+        # looked at it and it fitted nowhere, which is a different thing
+        # from 'pending', where no run has considered it yet. Grouping
+        # these for the dashboard is the server's to do — they are found
+        # by status, not by the NULL topic a pending point also has.
+        db.assign_points(
+            conn,
+            [
+                {"id": p.id, "topic_id": None, "confidence": None,
+                 "processing_status": "unknown"}
+                for p in result.outliers
+            ],
+        )
+
+        # Once every point has been placed, a topic holding none is over:
+        # absorbed by another group, or dissolved. Dropped here rather
+        # than from plan.merged / plan.dissolved, so a row left behind by
+        # an earlier run goes with it.
+        dropped = db.delete_empty_topics(conn, form_id)
+
+        db.record_run(
+            conn,
+            form_id=form_id,
+            parameters=json.dumps({
+                "identity": counts,
+                "carry_min": config.TOPIC_CARRY_MIN,
+                "min_cluster_size": result.min_cluster_size,
+                "outlier_threshold": config.OUTLIER_THRESHOLD,
+                "n_points": len(points),
+                "n_topics": len(result.topics),
+            }),
+            started_at=started,
+            completed_at=datetime.now(timezone.utc),
+        )
+
+    _log(
+        f"  carried {counts['carried']}, added {counts['new']}, "
+        f"merged {counts['merged']}, dropped {dropped}"
+    )
+    return len(result.topics)
+
+
 # ── CLI ────────────────────────────────────────────────────────────────
+
+def _stages(args) -> list[str]:
+    """Stages this run writes to. --backfill/--relabel write labels, like ingest."""
+    if args.report or args.dry_run:
+        return []
+    stages = []
+    if not args.cluster_only or args.backfill or args.relabel:
+        stages.append("ingest")
+    if not args.ingest_only:
+        stages.append("cluster")
+    return stages
+
+
+def _take_locks(stages: list[str]) -> list[db.StageLock]:
+    locks = []
+    for stage in stages:
+        lock = db.StageLock(stage)
+        if not lock.acquire():
+            for held in locks:
+                held.release()
+            raise SystemExit(
+                f"another {stage} process holds the lock — most likely the "
+                f"gnp-ai@{stage} worker. Stop it first "
+                f"(sudo systemctl stop gnp-ai@{stage}), or add --dry-run."
+            )
+        locks.append(lock)
+    return locks
+
 
 def pass_once(conn, args) -> None:
     if args.report:
@@ -405,7 +504,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--once", action="store_true", help="single pass (default)")
     ap.add_argument("--watch", type=int, metavar="SECONDS",
-                    help="poll forever, every SECONDS; cron replaces this in production")
+                    help="poll forever, every SECONDS; in production the two "
+                         "workers in pipeline/worker.py replace this")
     ap.add_argument("--ingest-only", action="store_true", help="decompose/embed/sentiment only")
     ap.add_argument("--cluster-only", action="store_true", help="re-cluster existing points only")
     ap.add_argument("--backfill", action="store_true",
@@ -431,6 +531,7 @@ def main() -> None:
     if args.ingest_only and args.cluster_only:
         ap.error("--ingest-only and --cluster-only are mutually exclusive")
 
+    locks = _take_locks(_stages(args))
     conn = db.connect()
     try:
         if args.watch:
@@ -445,6 +546,8 @@ def main() -> None:
         sys.exit(0)
     finally:
         conn.close()
+        for lock in locks:
+            lock.release()
 
 
 if __name__ == "__main__":

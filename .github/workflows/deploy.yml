@@ -1,5 +1,8 @@
 name: Deploy AI
 
+# Two systemd workers run from a git checkout on ontario2 (deploy/gnp-ai@.service).
+# Self-hosted, because only the faculty network reaches the database and Ollama.
+
 on:
   push:
     branches: [main]
@@ -10,56 +13,42 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/opengnp/gnp-ai
+  APP_DIR: ${{ vars.GNP_AI_DIR || '/home/deploy/gnp-ai' }}
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
-    needs: build-and-push
     runs-on: [self-hosted, ontario2]
+    timeout-minutes: 30
     steps:
-      - name: Deploy
+      - name: Update the checkout
         run: |
-          set -e
-          cd /home/deploy/gnp
+          set -euo pipefail
+          cd "$APP_DIR"
+          git fetch --quiet origin main
+          OLD=$(git rev-parse HEAD)
+          # untracked .env and .venv survive this
+          git reset --hard origin/main
+          if git diff --quiet "$OLD" HEAD -- pyproject.toml; then
+            echo "dependencies unchanged"
+          else
+            .venv/bin/pip install --quiet -e .
+          fi
+          git log --oneline -1
 
-          docker compose pull gnp-ai
-          docker compose up -d gnp-ai
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          cd "$APP_DIR"
+          # read-only
+          .venv/bin/python -m pipeline.run --ingest-only --dry-run
+          .venv/bin/python -c "import httpx; from pipeline import config; \
+            httpx.get(config.OLLAMA_URL + '/api/version', timeout=5).raise_for_status(); \
+            print('ollama reachable at', config.OLLAMA_URL)"
 
-          # Longer window than gnp-server: loading torch/ML models slows startup.
-          for i in $(seq 1 10); do
-            sleep 3
-            if curl -fsS http://127.0.0.1:8000/; then
-              echo "gnp-ai is healthy"
-              exit 0
-            fi
-          done
-
-          echo "gnp-ai did not become healthy after restart" >&2
-          docker compose logs --tail=50 gnp-ai >&2
-          exit 1
+      - name: Restart workers
+        run: |
+          set -euo pipefail
+          # must match /etc/sudoers.d/gnp-ai exactly
+          sudo /usr/bin/systemctl restart gnp-ai@ingest.service gnp-ai@cluster.service
+          sleep 15
+          systemctl is-active gnp-ai@ingest.service gnp-ai@cluster.service
