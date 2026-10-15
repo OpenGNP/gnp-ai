@@ -37,9 +37,7 @@ class Worker:
         self.stopping = threading.Event()
         self.lock = db.StageLock(stage)
         self._backoff = _BACKOFF_START
-        # cluster only: form -> pending count when skipped as too small,
-        # form -> (failures, monotonic time of next try)
-        self._too_few: dict[int, int] = {}
+        # cluster only: form -> (failures, monotonic time of next try)
         self._retry_at: dict[int, tuple[int, float]] = {}
 
     # ── lifecycle ──────────────────────────────────────────────────────
@@ -123,11 +121,6 @@ class Worker:
                 break
             state = db.cluster_readiness(conn, form_id)
             if not state.pending:
-                self._too_few.pop(form_id, None)
-                continue
-
-            # too few points last time and nothing new since
-            if self._too_few.get(form_id) == state.pending:
                 continue
 
             failures, retry_at = self._retry_at.get(form_id, (0, 0.0))
@@ -140,7 +133,7 @@ class Worker:
 
             _log(f"cluster: form {form_id} due — {reason}")
             try:
-                topics = run.cluster_form(
+                run.cluster_form(
                     conn, form_id, title, dry_run=False, stop=self.stopping.is_set
                 )
             except Exception as exc:  # noqa: BLE001 — one form must not starve the rest
@@ -154,8 +147,6 @@ class Worker:
                 continue
 
             self._retry_at.pop(form_id, None)
-            if topics is None and not self.stopping.is_set():
-                self._too_few[form_id] = state.pending
             did_work = True
         return did_work
 

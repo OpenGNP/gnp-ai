@@ -295,11 +295,10 @@ def cluster_form(
     stop: Callable[[], bool] = _never,
 ) -> int | None:
     """Re-cluster one form in one transaction. Returns the topic count, or
-    None if nothing was written (too few points, or stopped before the write)."""
+    None if nothing was written (no points, or stopped before the write)."""
     started = datetime.now(timezone.utc)
     points = db.clusterable_points(conn, form_id)
-    if len(points) < config.CLUSTER_QUIET_MIN:
-        _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), too few, skipped")
+    if not points:
         return None
 
     _log(f"cluster: form {form_id} · {form_title} — {len(points)} embedded point(s)")

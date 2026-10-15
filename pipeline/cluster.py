@@ -52,12 +52,6 @@ def _counts(members: list[ClusterablePoint]) -> dict[str, int]:
 
 
 def cluster(points: list[ClusterablePoint]) -> ClusterResult:
-    if len(points) < config.CLUSTER_QUIET_MIN:
-        raise SystemExit(
-            f"only {len(points)} embedded points — need at least {config.CLUSTER_QUIET_MIN} to cluster. "
-            "Ingest more submissions, or run with --backfill to bring the existing points in."
-        )
-
     docs = [p.text for p in points]
     embeddings = np.stack([as_array(p.embedding) for p in points])
     n_docs = len(docs)
@@ -65,6 +59,9 @@ def cluster(points: list[ClusterablePoint]) -> ClusterResult:
     min_cluster_size = max(
         config.MIN_CLUSTER_POINTS, round(n_docs * config.MIN_CLUSTER_SIZE_PCT / 100)
     )
+    # Too few to cluster: every point becomes an outlier ('unknown') until more arrive.
+    if n_docs <= min_cluster_size:
+        return ClusterResult(topics=[], outliers=list(points), min_cluster_size=min_cluster_size)
 
     model, labels = fit(min_cluster_size, docs, embeddings)
     labels = reduce_outliers(model, docs, labels, embeddings, config.OUTLIER_THRESHOLD)
