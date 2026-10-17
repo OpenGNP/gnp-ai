@@ -16,6 +16,9 @@ dist/
 .pytest_cache/
 # Student feedback data — must never be committed
 data/reports
+# Annotation sets: real complaints, including bribery and harassment reports
+data/labels/
+models/
 backups/
 
 # Secrets

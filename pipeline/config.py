@@ -71,6 +71,21 @@ MIN_CLUSTER_POINTS = int(os.environ.get("MIN_CLUSTER_POINTS", "8"))
 MIN_CLUSTER_SIZE_PCT = float(os.environ.get("MIN_CLUSTER_SIZE_PCT", "1.0"))
 OUTLIER_THRESHOLD = float(os.environ.get("OUTLIER_THRESHOLD", "0.30"))
 
+# Cosine above which two points are treated as saying the same thing, and so
+# are forced into one topic however the density landscape fell (see
+# cluster.py:_merge_near_duplicates). Swept on form 3's 1109 points, counting
+# how many points the pass moves and how large a transitive group it can build:
+#
+#   0.90   4 moved    0.85  15 moved    0.82  22 moved
+#   0.80  24 moved    0.75  45 moved
+#
+# Group size stays at 15-16 across the whole range, so there is no cascade to
+# guard against; the threshold only decides how much is caught. 0.80 takes the
+# families that read as one complaint — three phrasings of the lunch queue,
+# three of the signatures-per-request — and stops short of 0.75, where pairs
+# start differing by more than a slot value.
+NEAR_DUPLICATE_SIM = float(os.environ.get("NEAR_DUPLICATE_SIM", "0.80"))
+
 # Topic identity across runs. A new group inherits an existing topic's id when
 # it holds at least TOPIC_CARRY_MIN of that topic's surviving points, which is
 # what keeps a topic's trend line continuous. TOPIC_SPLIT_MIN is the share a second

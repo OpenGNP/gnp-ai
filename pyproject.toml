@@ -32,6 +32,8 @@ dependencies = [
 # Only scripts/build_dataset.py needs these: it reads the gold decomposition
 # from feedback_expanded_with_gemini.xlsx.
 experiments = ["openpyxl==3.1.5"]
+# Only scripts/visualize_clusters.py needs these.
+viz = ["plotly==6.1.2"]
 
 [build-system]
 requires = ["setuptools>=68"]

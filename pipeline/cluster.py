@@ -123,8 +123,135 @@ def cluster(points: list[ClusterablePoint]) -> ClusterResult:
             )
         )
 
+    _merge_near_duplicates(topics, outliers, points, embeddings)
+
     return ClusterResult(
         topics=topics,
         outliers=outliers,
         min_cluster_size=min_cluster_size,
     )
+
+
+def _components(embeddings: np.ndarray, threshold: float) -> list[list[int]]:
+    """Index groups whose members are transitively within `threshold` cosine.
+
+    A radius query rather than the full n x n similarity matrix: that matrix is
+    fine at a thousand points and 800MB at ten thousand, and this stage runs on
+    whatever a form has accumulated.
+    """
+    from sklearn.neighbors import NearestNeighbors
+
+    unit = embeddings / np.clip(np.linalg.norm(embeddings, axis=1, keepdims=True), 1e-12, None)
+    # On unit vectors, cosine >= t is euclidean distance <= sqrt(2 - 2t).
+    radius = float(np.sqrt(max(0.0, 2.0 - 2.0 * threshold)))
+    neighbours = NearestNeighbors(radius=radius, metric="euclidean").fit(unit)
+
+    parent = list(range(len(unit)))
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for i, js in enumerate(neighbours.radius_neighbors(unit, return_distance=False)):
+        for j in js:
+            if i != j:
+                parent[find(i)] = find(int(j))
+
+    groups: dict[int, list[int]] = {}
+    for i in range(len(unit)):
+        groups.setdefault(find(i), []).append(i)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def _merge_near_duplicates(
+    topics: list[TopicDraft],
+    outliers: list[ClusterablePoint],
+    points: list[ClusterablePoint],
+    embeddings: np.ndarray,
+) -> None:
+    """Put points that say the same thing in the same topic.
+
+    Two causes, one remedy. Identical text splits because UMAP lays points out
+    by a stochastic optimisation over a neighbour graph, so two nodes carrying
+    the same vector still take separate paths and can land either side of a
+    boundary HDBSCAN treats as hard. Near-identical text splits for a realer
+    reason: the embedding carries the varying detail as well as the shared
+    complaint, so "the lunch queue takes twenty minutes at the start of term"
+    and "...in the afternoon" can be pulled apart by the time of day rather
+    than grouped by the queue. Measured on form 3, that put three phrasings of
+    one lunch-queue complaint into three different topics, and three of one
+    signatures-per-request complaint into three more.
+
+    Both are the same defect — a group the data says is one thing, reported as
+    several — so one pass fixes them: take the transitive groups within
+    config.NEAR_DUPLICATE_SIM and move each onto the topic already holding its
+    highest-confidence member. Identical text is simply the cosine 1.0 case.
+    """
+    point_by_id = {p.id: p for p in points}
+    embedding_by_id = {p.id: v for p, v in zip(points, embeddings)}
+
+    home_of: dict[int, int] = {}      # point id -> index into `topics`
+    confidence_of: dict[int, float] = {}
+    for ti, topic in enumerate(topics):
+        for point_id, confidence in topic.members:
+            home_of[point_id] = ti
+            confidence_of[point_id] = confidence
+    if not home_of:
+        return
+
+    # Each group goes where its most confident assigned member already sits. An
+    # outlier carries no confidence, so a group of only outliers has no home and
+    # is left alone: it fitted nowhere, which is a finding, not an error.
+    target: dict[int, int] = {}
+    for group in _components(embeddings, config.NEAR_DUPLICATE_SIM):
+        ids = [points[i].id for i in group]
+        placed = [pid for pid in ids if pid in home_of]
+        if not placed:
+            continue
+        best = max(placed, key=lambda pid: confidence_of[pid])
+        for pid in ids:
+            target[pid] = home_of[best]
+
+    touched: set[int] = set()
+
+    for ti, topic in enumerate(topics):
+        keep = []
+        for point_id, confidence in topic.members:
+            home = target.get(point_id, ti)
+            if home != ti:
+                topics[home].members.append((point_id, confidence))
+                touched.update((ti, home))
+            else:
+                keep.append((point_id, confidence))
+        topic.members = keep
+
+    still_out = []
+    for point in outliers:
+        home = target.get(point.id)
+        if home is None:
+            still_out.append(point)
+        else:
+            # It has no assignment confidence of its own; inherit the group's,
+            # so the dashboard does not read a rescued outlier as a certain one.
+            topics[home].members.append((point.id, 0.0))
+            touched.add(home)
+    outliers[:] = still_out
+
+    for ti in touched:
+        topic = topics[ti]
+        member_ids = [pid for pid, _ in topic.members]
+        if not member_ids:
+            continue  # left with nothing; the caller drops empty topics
+        members = [point_by_id[pid] for pid in member_ids]
+        topic.counts = _counts(members)
+        created = [m.created_at for m in members]
+        topic.first_seen = min(created)
+        topic.last_seen = max(created)
+        vectors = np.stack([embedding_by_id[pid] for pid in member_ids])
+        topic.centroid = vectors.mean(axis=0).astype(np.float32)
+        topic.member_texts = [
+            point_by_id[pid].text
+            for pid, _ in sorted(topic.members, key=lambda m: -m[1])
+        ]

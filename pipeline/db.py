@@ -211,6 +211,22 @@ def pending_answers(
         return [(row[0], row[1]) for row in cur.fetchall()]
 
 
+def all_decomposed(conn: Connection, answer_ids: list[int]) -> bool:
+    """True if every one of these answers already carries decomposed_at.
+
+    Used to tell an ambiguous commit (write succeeded, only the ack was lost)
+    from a genuine failure before retrying an insert that is not idempotent.
+    """
+    if not answer_ids:
+        return True
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) FROM answers WHERE id = ANY(%s) AND decomposed_at IS NULL",
+            (answer_ids,),
+        )
+        return cur.fetchone()[0] == 0
+
+
 def mark_decomposed(conn: Connection, answer_ids: list[int]) -> int:
     """Record that decomposition has read these answers.
 

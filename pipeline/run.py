@@ -114,10 +114,20 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
                     db.insert_points(conn, rows)
                     db.mark_decomposed(conn, answer_ids)
             except psycopg.OperationalError as exc:
-                _log(f"  write failed ({exc.__class__.__name__}), retrying on a new connection")
-                with conn.transaction():
-                    db.insert_points(conn, rows)
-                    db.mark_decomposed(conn, answer_ids)
+                # The drop can happen after Postgres has already committed —
+                # the client only loses the ack, not the write. Retrying
+                # insert_points() unconditionally then double-inserts the
+                # whole chunk. decomposed_at is the same marker pending_answers()
+                # trusts, so it also tells us whether the first attempt landed:
+                # if every answer here is already marked, skip the retry.
+                _log(f"  write failed ({exc.__class__.__name__}), checking what landed")
+                if db.all_decomposed(conn, answer_ids):
+                    _log("  first attempt had already committed, skipping retry")
+                else:
+                    _log("  retrying on a new connection")
+                    with conn.transaction():
+                        db.insert_points(conn, rows)
+                        db.mark_decomposed(conn, answer_ids)
 
             written += len(rows)
             field_points += len(rows)
