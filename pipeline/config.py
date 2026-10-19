@@ -1,8 +1,4 @@
-"""Every tunable the pipeline reads, in one place.
-
-Values live in gnp-ai/.env (gitignored) so the same code runs on a laptop and
-on the faculty VM without edits.
-"""
+"""Every tunable the pipeline reads, from gnp-ai/.env."""
 
 from __future__ import annotations
 
@@ -25,48 +21,34 @@ DB_SCHEMA = os.environ.get("DB_SCHEMA", "public")
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 DECOMPOSE_MODEL = os.environ.get("DECOMPOSE_MODEL", "mistral:7b-instruct")
-DECOMPOSE_PROMPT = os.environ.get("DECOMPOSE_PROMPT", "v1")
+DECOMPOSE_PROMPT = os.environ.get("DECOMPOSE_PROMPT", "v2")
 
-# Longest answer that bypasses decomposition when it holds no clause break.
-# Measured on the ingested corpus: no answer of two to six words ever split
-# into more than one point, while answers of seven to ten did — eleven of
-# fifty-two. See pipeline/decompose.py:needs_splitting for why the model must
-# not see these at all.
+# Same value on every call: Ollama reloads the model when num_ctx changes.
+OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", "8192"))
+OLLAMA_CONNECT_TIMEOUT = float(os.environ.get("OLLAMA_CONNECT_TIMEOUT", "5"))
+# Max gap between streamed tokens, not a limit on the whole answer.
+OLLAMA_READ_TIMEOUT = float(os.environ.get("OLLAMA_READ_TIMEOUT", "60"))
+# Failures on one answer before it is kept whole as a single point.
+DECOMPOSE_MAX_ATTEMPTS = int(os.environ.get("DECOMPOSE_MAX_ATTEMPTS", "3"))
+
+# Answers this short with no clause break skip the model (decompose.needs_splitting).
 SHORT_ANSWER_WORDS = int(os.environ.get("SHORT_ANSWER_WORDS", "6"))
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 SENTIMENT_MODEL = os.environ.get(
     "SENTIMENT_MODEL", "cardiffnlp/twitter-roberta-base-sentiment-latest"
 )
+# Legacy toxic-bert backend, only used by scripts/test_violation.py.
 VIOLATION_MODEL = os.environ.get("VIOLATION_MODEL", "unitary/toxic-bert")
-# Zero-shot NLI alternative to asking the 7B LLM: same task, ~370MB and ~10x faster.
-# Swap for MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7 to cover Thai.
+VIOLATION_THRESHOLD = float(os.environ.get("VIOLATION_THRESHOLD", "0.5"))
 VIOLATION_ZEROSHOT_MODEL = os.environ.get(
     "VIOLATION_ZEROSHOT_MODEL", "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
 )
-# Swept over the 34-case labelled set in data/violation_testset.csv: 0.65 gives
-# 88% correct with zero false positives, against 85% and 4 false positives when
-# the raw argmax is taken. Genuine reports score 0.72-0.88, ordinary complaints
-# that the model leans on score 0.53-0.62, so the gap sits here.
-VIOLATION_ZEROSHOT_THRESHOLD = float(os.environ.get("VIOLATION_ZEROSHOT_THRESHOLD", "0.65"))
-VIOLATION_THRESHOLD = float(os.environ.get("VIOLATION_THRESHOLD", "0.5"))
+# Swept on data/violation_testset.csv: 83% correct, 3 false positives.
+VIOLATION_ZEROSHOT_THRESHOLD = float(os.environ.get("VIOLATION_ZEROSHOT_THRESHOLD", "0.75"))
 CLASSIFIER_BATCH_SIZE = int(os.environ.get("CLASSIFIER_BATCH_SIZE", "16"))
 
-# The smallest group worth calling a topic. Two bars, because they answer
-# different questions, and min_cluster_size is whichever is higher:
-#
-#   MIN_CLUSTER_POINTS  below this a group is too small to act on, however
-#                       small the corpus. A floor of 2 — HDBSCAN's own minimum
-#                       — said nothing about the work.
-#   MIN_CLUSTER_SIZE_PCT  on a large corpus, do not surface what is
-#                       statistically trivial.
-#
-# A percentage alone scales the wrong way: it coarsens topics as feedback
-# accumulates, when what should stay constant is how fine a topic is. At 2.0%
-# the 1109-point corpus reached min_cluster_size 22, and themes raised eight
-# or fifteen times — orientation missing visa information, announcements lost
-# in a Teams scroll — were dropped as noise while coherence (NPMI) fell to
-# -0.197, meaning a topic's own words co-occurred less than chance. These
-# values give 8 at 398 points and 11 at 1109, both measured directly.
+# min_cluster_size is the larger of the two. A percentage alone grows with the
+# corpus and drops real themes as noise (at 2.0% / 1109 points it reached 22).
 MIN_CLUSTER_POINTS = int(os.environ.get("MIN_CLUSTER_POINTS", "8"))
 MIN_CLUSTER_SIZE_PCT = float(os.environ.get("MIN_CLUSTER_SIZE_PCT", "1.0"))
 OUTLIER_THRESHOLD = float(os.environ.get("OUTLIER_THRESHOLD", "0.30"))
@@ -94,10 +76,13 @@ NEAR_DUPLICATE_SIM = float(os.environ.get("NEAR_DUPLICATE_SIM", "0.80"))
 TOPIC_CARRY_MIN = float(os.environ.get("TOPIC_CARRY_MIN", "0.50"))
 TOPIC_SPLIT_MIN = float(os.environ.get("TOPIC_SPLIT_MIN", "0.20"))
 
-# Recorded as ai_model_runs.model_version so a run can be traced back to the
-# code that produced it. It is not an ownership marker: canonical_topics.form_id
-# already scopes a run to the topics it is responsible for.
-PIPELINE_TAG = "pipeline:gnp-ai"
+# Workers sleep this long only when they find no work.
+INGEST_IDLE_SEC = float(os.environ.get("INGEST_IDLE_SEC", "30"))
+CLUSTER_IDLE_SEC = float(os.environ.get("CLUSTER_IDLE_SEC", "60"))
+# Re-cluster a form once ingest has caught up and it has been quiet this long,
+# or once its oldest new point has waited MAX_WAIT.
+CLUSTER_QUIET_MIN = float(os.environ.get("CLUSTER_QUIET_MIN", "30"))
+CLUSTER_MAX_WAIT_MIN = float(os.environ.get("CLUSTER_MAX_WAIT_MIN", "360"))
 
 
 def require_database_url() -> str:
