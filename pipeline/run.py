@@ -164,10 +164,20 @@ def ingest(
                     db.insert_points(conn, rows)
                     db.mark_decomposed(conn, read)
             except psycopg.OperationalError as exc:
-                _log(f"  write failed ({exc.__class__.__name__}), retrying on a new connection")
-                with conn.transaction():
-                    db.insert_points(conn, rows)
-                    db.mark_decomposed(conn, read)
+                # The drop can happen after Postgres has already committed —
+                # the client only loses the ack, not the write. Retrying
+                # insert_points() unconditionally then double-inserts the
+                # whole chunk. decomposed_at is the same marker pending_answers()
+                # trusts, so it also tells us whether the first attempt landed:
+                # if every answer here is already marked, skip the retry.
+                _log(f"  write failed ({exc.__class__.__name__}), checking what landed")
+                if db.all_decomposed(conn, answer_ids):
+                    _log("  first attempt had already committed, skipping retry")
+                else:
+                    _log("  retrying on a new connection")
+                    with conn.transaction():
+                        db.insert_points(conn, rows)
+                        db.mark_decomposed(conn, answer_ids)
 
             written += len(rows)
             field_points += len(rows)
@@ -280,9 +290,28 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
             conn, form_id, form_title, dry_run=dry_run, name_topics=name_topics
         ) or 0
 
-    if dry_run:
-        _log(f"cluster: dry run — {total_topics} topic(s) across {len(forms)} form(s), nothing written")
-    return total_topics
+        started = datetime.now(timezone.utc)
+        points = db.clusterable_points(conn, form_id)
+        if len(points) < cluster_mod.MIN_POINTS:
+            # Too few to cluster, but they have been considered, and leaving
+            # them 'pending' makes the dashboard report the form as never
+            # analysed and show nothing at all. Marked 'unknown' they appear
+            # as uncategorised, which is what they are. They are not lost to
+            # clustering: clusterable_points reads every embedded point
+            # whatever its status, so once enough arrive these join the run.
+            if not dry_run and points:
+                with conn.transaction():
+                    db.assign_points(
+                        conn,
+                        [
+                            {"id": p.id, "topic_id": None, "confidence": None,
+                             "processing_status": "unknown"}
+                            for p in points
+                        ],
+                    )
+            _log(f"cluster: form {form_id} · {form_title} — {len(points)} point(s), "
+                 "too few to cluster, left uncategorised")
+            continue
 
 
 def cluster_form(
