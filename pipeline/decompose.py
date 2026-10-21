@@ -55,6 +55,15 @@ def needs_splitting(text: str) -> bool:
     return bool(_CLAUSE_BREAK.search(text))
 
 
+def output_budget(prompt: str, text: str) -> int:
+    """Output tokens for this answer. The points repeat the answer's wording,
+    so a fixed 512 cut long answers off mid-JSON. ~3 chars per token, capped
+    so prompt and output fit OLLAMA_NUM_CTX."""
+    wanted = max(512, 2 * (len(text) // 3 + 1))
+    room = config.OLLAMA_NUM_CTX - (len(SYSTEM_PROMPT) + len(prompt)) // 3
+    return max(256, min(wanted, room))
+
+
 def decompose(http: httpx.Client, text: str) -> tuple[list[str], str]:
     """Returns (points, status). On a parse failure the whole answer is kept as
     a single point — losing a respondent's feedback is worse than a coarse split."""
@@ -66,7 +75,7 @@ def decompose(http: httpx.Client, text: str) -> tuple[list[str], str]:
         return [text], "short"
 
     prompt = build_prompt(config.DECOMPOSE_PROMPT, text)
-    raw, _ = llm.chat(http, SYSTEM_PROMPT, prompt)
+    raw, _ = llm.chat(http, SYSTEM_PROMPT, prompt, num_predict=output_budget(prompt, text))
     points, status = parse_output(config.DECOMPOSE_PROMPT, raw)
 
     if not points:

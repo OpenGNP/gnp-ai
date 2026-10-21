@@ -61,11 +61,15 @@ def name_topic(
     http: httpx.Client, keywords: str, points: list[str]
 ) -> tuple[str | None, str | None]:
     """Returns (title, summary), or (None, None) when the model's answer is
-    unusable — the caller keeps the keyword-derived name in that case."""
+    unusable or Ollama is down — the caller keeps the keyword name, so
+    clustering does not stop with Ollama."""
     listed = "\n".join(f"- {text}" for text in _examples(points))
     prompt = TEMPLATE.format(keywords=keywords, points=listed)
 
-    raw, _ = llm.chat(http, SYSTEM_PROMPT, prompt, num_predict=160)
+    try:
+        raw, _ = llm.chat(http, SYSTEM_PROMPT, prompt, num_predict=160)
+    except httpx.HTTPError:
+        return None, None
     obj = llm.parse_object(raw)
     if not obj:
         return None, None

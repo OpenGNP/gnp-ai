@@ -1,0 +1,23 @@
+# sudo systemctl enable --now gnp-ai@ingest gnp-ai@cluster
+# User and paths must match the runner's user and the workflow's APP_DIR.
+
+[Unit]
+Description=gnp-ai %i worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=deploy
+WorkingDirectory=/home/deploy/gnp-ai
+ExecStart=/home/deploy/gnp-ai/.venv/bin/python -m pipeline.worker --stage %i
+Environment=PYTHONUNBUFFERED=1
+
+# Time to finish the answer in progress before SIGKILL (which is safe, just slower).
+KillSignal=SIGTERM
+TimeoutStopSec=150
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
