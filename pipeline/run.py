@@ -88,7 +88,7 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
             texts = [text for _, text in staged]
             vectors = embed.encode(texts, dims)
             labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
-            violations = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
+            flags = [violation.NO_LABELS] * len(texts) if skip_sentiment else violation.label_zeroshot(texts)
 
             rows = [
                 {
@@ -96,11 +96,11 @@ def ingest(conn, *, limit: int | None, dry_run: bool, skip_sentiment: bool) -> i
                     "point_text": text,
                     "embedding": vector,
                     "sentiment_label": sentiment_label,
-                    "is_violation": violation,
+                    **flag,
                     "processing_status": "pending",
                 }
-                for (answer_id, text), vector, sentiment_label, violation
-                in zip(staged, vectors, labels, violations)
+                for (answer_id, text), vector, sentiment_label, flag
+                in zip(staged, vectors, labels, flags)
             ]
 
             # db.Connection re-dials between transactions, but one that dies
@@ -158,17 +158,17 @@ def backfill(conn, *, dry_run: bool, skip_sentiment: bool, form_ids: list[int] |
     vectors = embed.encode(texts, db.embedding_dims(conn))
 
     labels = [None] * len(texts) if skip_sentiment else sentiment.classify(texts)
-    violations = [None] * len(texts) if skip_sentiment else violation.flag_zeroshot(texts)
+    flags = [violation.NO_LABELS] * len(texts) if skip_sentiment else violation.label_zeroshot(texts)
 
     rows = [
         {
             "id": point_id,
             "embedding": vector,
             "sentiment_label": label,
-            "is_violation": violation,
+            **flag,
             "processing_status": "pending",
         }
-        for (point_id, _), vector, label, violation in zip(missing, vectors, labels, violations)
+        for (point_id, _), vector, label, flag in zip(missing, vectors, labels, flags)
     ]
 
     with conn.transaction():
@@ -192,11 +192,11 @@ def relabel(conn, *, dry_run: bool, form_ids: list[int] | None = None) -> int:
 
     texts = [text for _, text in targets]
     labels = sentiment.classify(texts)
-    violations = violation.flag_zeroshot(texts)
+    flags = violation.label_zeroshot(texts)
 
     rows = [
-        {"id": point_id, "sentiment_label": label, "is_violation": violation}
-        for (point_id, _), label, violation in zip(targets, labels, violations)
+        {"id": point_id, "sentiment_label": label, **flag}
+        for (point_id, _), label, flag in zip(targets, labels, flags)
     ]
     with conn.transaction():
         db.update_point_labels(conn, rows)
@@ -392,15 +392,39 @@ def recluster(conn, *, dry_run: bool, name_topics: bool = True, force: bool = Fa
 
 # ── CLI ────────────────────────────────────────────────────────────────
 
-def pass_once(conn, args) -> None:
+def pass_once(conn, args) -> bool:
+    """One pass. Returns False when another run holds the job lock.
+
+    Everything below ingest writes the same tables, so the lock covers the
+    whole mutating pass rather than ingest alone: a re-cluster running against
+    points a concurrent ingest is still inserting would read a half-written
+    corpus.
+
+    --report and --dry-run write nothing and are not locked — a read-only look
+    at the database should never be refused because a job is running, which is
+    exactly when someone is most likely to want one.
+    """
     if args.report:
         text, points = report.build(conn)
         print(text)
         report_path, csv_path = report.save(text, points)
         _log(f"report: {report_path}")
         _log(f"csv:    {csv_path}")
-        return
+        return True
 
+    if args.dry_run:
+        _stages(conn, args)
+        return True
+
+    with db.job_lock() as acquired:
+        if not acquired:
+            _log("another run holds the job lock — skipping this pass")
+            return False
+        _stages(conn, args)
+    return True
+
+
+def _stages(conn, args) -> None:
     if args.relabel:
         relabel(conn, dry_run=args.dry_run, form_ids=args.form)
 
@@ -466,7 +490,11 @@ def main() -> None:
                 pass_once(conn, args)
                 time.sleep(args.watch)
         else:
-            pass_once(conn, args)
+            # A single pass that found the lock held did no work. Exit non-zero
+            # so a cron or a shell `&&` chain can tell "nothing to do" from
+            # "someone else is doing it" — the second is worth retrying.
+            if not pass_once(conn, args):
+                sys.exit(75)  # EX_TEMPFAIL
     except KeyboardInterrupt:
         _log("stopped")
         sys.exit(0)

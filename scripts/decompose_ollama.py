@@ -212,6 +212,76 @@ About:"""
 FULL_PROMPTS = {"fewshot": FEWSHOT_PROMPT, "count": COUNT_PROMPT,
                 "annotated": ANNOTATED_PROMPT}
 
+
+# ── repair: reporting voice ────────────────────────────────────────────
+# BASE_RULES 7-8 tell the model to replace a pronoun with the noun it refers
+# to, and on feedback written in the first person it reads "I" as one of those:
+# "I want Lockers" comes back as "Request for Lockers", and "I've never talked
+# to SIT about visa stuff" as "User mentions not having talked to SIT about
+# visa-related matters". That is a rewrite, not a decomposition — it costs the
+# writer's voice, and "The user" is then a token the embedding sees in points
+# no student ever wrote.
+#
+# Repairing beats re-prompting. Decoding is temperature 0 (pipeline/llm.py), so
+# re-sending the same prompt returns the same text, byte for byte; and a prompt
+# variant that forbids the voice up front changed nothing measurable on a random
+# sample of 25 answers (v2 1 narrated point, v5 2 — both ~2-4%, inside noise)
+# because the failure is rare and the instruction competes with rules 7-8.
+# Asking a second time with the points in hand is a different, much narrower
+# task: keep the content, change only the person it is told in.
+# Matched anywhere in the point, not only at its start: the rewrite is not just
+# a way of opening a sentence. "my evening lab" comes back as "the user's
+# evening lab", "too many of us at one booth" as "there are too many users at
+# one booth", "find what I need" as "find what the user needs". Across 1466
+# stored points, every one of the 29 containing "user" was a rewrite of a
+# first-person original — no student writes "the user" about themselves.
+#
+# Deliberately over-inclusive. "the student" also catches sentences whose only
+# fault is naming a real third party ("a senior student threatened to hit me"),
+# but a false positive costs one LLM call and nothing else: _repair_voice keeps
+# the original unless the rewrite returns the same number of points AND fewer
+# narrated ones, so a point that was already fine cannot be damaged by being
+# checked.
+NARRATED_RE = re.compile(
+    r"\b(?:users?|respondents?|the\s+student|the\s+writer)\b"
+    r"|^\s*request\s+for\b",
+    re.IGNORECASE,
+)
+
+
+def narrated(points: list[str]) -> list[int]:
+    """Indexes of points told from the outside instead of in the writer's voice."""
+    return [i for i, p in enumerate(points) if NARRATED_RE.search(p)]
+
+
+REPAIR_PROMPT = """These points were extracted from one piece of student feedback, \
+but some are written as a report about the writer instead of in the writer's own voice.
+
+Original feedback:
+{raw_text}
+
+Points:
+{points}
+
+Rewrite EVERY point in the writer's own voice, exactly as the original feedback \
+is written. Keep the same number of points, in the same order, each about the same \
+thing. Change only the voice:
+
+- Never begin with "The user", "The student", "The respondent" or "The writer".
+- Never describe what the writer does ("the user requests", "the user mentions", \
+"the user is experiencing"). Say what they said.
+- "Request for Lockers" becomes "I want Lockers".
+- "User mentions not having talked to SIT" becomes "I've never really talked to SIT".
+- A point already in the writer's voice is copied unchanged.
+- Take the wording from the original feedback wherever you can.
+
+Return ONLY a JSON array of {n} strings."""
+
+
+def build_repair_prompt(raw_text: str, points: list[str]) -> str:
+    listed = "\n".join(f"{i + 1}. {p}" for i, p in enumerate(points))
+    return REPAIR_PROMPT.format(raw_text=raw_text, points=listed, n=len(points))
+
 _OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
