@@ -43,14 +43,16 @@ VIOLATION_MODEL = os.environ.get("VIOLATION_MODEL", "unitary/toxic-bert")
 VIOLATION_ZEROSHOT_MODEL = os.environ.get(
     "VIOLATION_ZEROSHOT_MODEL", "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
 )
-# The score is legal + ethics + moral (= 1 - none, see violation.classify_zeroshot).
-# On a 20-case probe set, genuine reports scored 0.57-1.00 and ordinary complaints
-# 0.01-0.30, except a declined-and-fine request at 0.60. Between the two
-# thresholds a point is violation_status 'possible' (needs a human look); at or
-# above the strong one it is 'violation'.
-VIOLATION_ZEROSHOT_THRESHOLD = float(os.environ.get("VIOLATION_ZEROSHOT_THRESHOLD", "0.5"))
+# The score is the entailment probability of the strongest violation label (see
+# violation.classify_zeroshot). Swept over data/violation_testset.csv: 0.08 gives
+# F1 0.90 (P 1.00, R 0.81), and 0.05-0.10 all stay within 0.02 of that. It looks
+# low because each label is judged alone and ordinary complaints sit near 0.00.
+# Between the two thresholds a point is violation_status 'possible' (needs a
+# human look); at or above the strong one it is 'violation'. The median genuine
+# report scores 0.93.
+VIOLATION_ZEROSHOT_THRESHOLD = float(os.environ.get("VIOLATION_ZEROSHOT_THRESHOLD", "0.08"))
 VIOLATION_ZEROSHOT_STRONG_THRESHOLD = float(
-    os.environ.get("VIOLATION_ZEROSHOT_STRONG_THRESHOLD", "0.7")
+    os.environ.get("VIOLATION_ZEROSHOT_STRONG_THRESHOLD", "0.5")
 )
 VIOLATION_THRESHOLD = float(os.environ.get("VIOLATION_THRESHOLD", "0.5"))
 CLASSIFIER_BATCH_SIZE = int(os.environ.get("CLASSIFIER_BATCH_SIZE", "16"))

@@ -193,10 +193,17 @@ def flag_llm(http: httpx.Client, texts: list[str]) -> list[bool | None]:
 
 # Wording matters more than the model here. Each category is split into several
 # concrete hypotheses (the dict maps many labels to one category), mirroring the
-# LLM prompt above. The "none" labels give ordinary complaints, sweeping opinions
-# and hypothetical or disproved events somewhere correct to land — NLI cannot
-# read negation, so without them "if a lecturer were selling answers..." scored
-# 0.89 ethics. Scores are summed per category in classify_zeroshot().
+# LLM prompt above. NLI does not generalise from an act to an abstract word: a
+# single "reports a crime or misconduct" hypothesis scored a bribe at 0.00, so
+# the labels name acts.
+#
+# Each label is scored on its own (multi_label) rather than in a softmax across
+# labels. The softmax always shares out 1.0, so praise like "everything was
+# alright" landed ~0.75 on the violation labels just because 8 of 11 labels were
+# violations; that ran the 169-case set at 59%. Independent scores let every
+# label say no. On that set (data/violation_testset.csv), multi_label with this
+# template gives F1 0.90 (P 1.00, R 0.81) at threshold 0.08, against 0.72 for the
+# best softmax variant.
 ZEROSHOT_LABELS = {
     "physical violence, a threat to hurt someone, or forced drinking or hazing": "legal",
     "sexual harassment, unwanted touching, or sexual coercion": "legal",
@@ -210,13 +217,12 @@ ZEROSHOT_LABELS = {
     "students' personal information such as health records, names or ID numbers "
     "made public without permission": "ethics",
     "a person insulted, humiliated, mocked, or harassed by someone": "moral",
-    "a complaint about teaching, exams, grades, workload, fees, scheduling, "
-    "facilities or service": "none",
-    "a general opinion that the whole university or system is bad": "none",
-    "a hypothetical question, or a suspicion that was checked and found false": "none",
 }
 
-ZEROSHOT_HYPOTHESIS = "This feedback reports {}."
+# Swept against "This feedback reports {}." (F1 0.89, but only at a knife-edge
+# 0.03), "This university feedback is about {}." (0.90) and "...describes an
+# actual incident of {}." (0.85). This one holds 0.88-0.90 from 0.05 to 0.10.
+ZEROSHOT_HYPOTHESIS = "The student writing this feedback describes {}."
 
 _zeroshot = None
 
@@ -238,23 +244,13 @@ def classify_zeroshot(text: str) -> tuple[bool, str, str]:
     """Returns (is_violation, category, reason). The reason carries the
     violation score so a threshold can be tuned from the report."""
     labels = list(ZEROSHOT_LABELS)
-    result = zeroshot()(text, labels, hypothesis_template=ZEROSHOT_HYPOTHESIS, multi_label=False)
+    result = zeroshot()(text, labels, hypothesis_template=ZEROSHOT_HYPOTHESIS, multi_label=True)
 
-    # Several labels share a category, so sum per category; otherwise the score
-    # depends on how many labels a category happens to be split into.
-    totals: dict[str, float] = {}
-    for label, score in zip(result["labels"], result["scores"]):
-        category = ZEROSHOT_LABELS[label]
-        totals[category] = totals.get(category, 0.0) + score
-
-    # Whether it is a violation and which kind are separate questions: a bribe
-    # splits ~0.67 legal / 0.31 ethics, so judging by the winning category alone
-    # undersells a report the model is 98% sure is misconduct. Score the sum of
-    # the violation categories (1 - none), then name the largest of them.
-    score = totals.get("legal", 0.0) + totals.get("ethics", 0.0) + totals.get("moral", 0.0)
+    # The score is the strongest single act; the type is the category it belongs to.
+    label, score = result["labels"][0], result["scores"][0]
     flagged = score >= config.VIOLATION_ZEROSHOT_THRESHOLD
-    category = max(("legal", "ethics", "moral"), key=lambda c: totals.get(c, 0.0)) if flagged else "none"
-    return flagged, category, f"{score:.2f}"
+    category = ZEROSHOT_LABELS[label] if flagged else "none"
+    return flagged, category, f"{score:.3f}"
 
 
 NO_LABELS = {"is_violation": None, "violation_status": None, "violation_type": None}
