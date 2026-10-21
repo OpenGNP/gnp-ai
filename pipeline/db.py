@@ -13,8 +13,11 @@ statement here is deliberately narrow:
 
 from __future__ import annotations
 
+import hashlib
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Iterator
 
 import numpy as np
 import psycopg
@@ -117,52 +120,72 @@ def connect() -> Connection:
     return Connection()
 
 
-class StageLock:
-    """One process per stage across every machine, so two ingests never
-    decompose the same answer. A Postgres advisory lock on its own connection:
-    the main Connection re-dials, and a new session has lost its locks."""
+# ── job lock ───────────────────────────────────────────────────────────
 
-    # "gnp" in ASCII; the second key picks the stage.
-    _NAMESPACE = 0x676E70
-    _STAGES = {"ingest": 1, "cluster": 2}
+def _lock_key() -> int:
+    """A stable 64-bit key, per schema.
 
-    def __init__(self, stage: str) -> None:
-        self.stage = stage
-        self._key = self._STAGES[stage]
-        self._conn: psycopg.Connection | None = None
+    Scoped to the schema so a run against `test` cannot block one against
+    `public`, and derived by hash rather than written as a literal so the two
+    can never be given the same number by accident.
+    """
+    digest = hashlib.blake2b(
+        f"gnp-ai:job:{config.DB_SCHEMA}".encode(), digest_size=8
+    ).digest()
+    return int.from_bytes(digest, "big", signed=True)
 
-    def acquire(self) -> bool:
-        self.release()
+
+@contextmanager
+def job_lock() -> Iterator[bool]:
+    """Hold a Postgres advisory lock for one pass, or report that another has it.
+
+    Two ingests over the same answers duplicate every point they touch:
+    `pending_answers()` reads the work queue and `mark_decomposed()` retires it,
+    but nothing between them stops a second process reading the same queue
+    before the first commits. That is not hypothetical — it happened, and cost
+    51 duplicate points across 27 answers.
+
+    An advisory lock rather than a lock table: the pipeline is the second writer
+    on a database the server owns, and this needs no schema of its own. The lock
+    lives on a dedicated connection, not the caller's, because `Connection`
+    deliberately re-dials when the network has dropped it — and a re-dial would
+    silently hand the lock back while the job carried on believing it held it.
+
+    `pg_try_advisory_lock` never waits: a second run is told to come back later
+    rather than queueing behind a job that may take an hour. If the lock
+    connection is lost mid-run the lock is released, which is the behaviour
+    before this existed, not worse.
+
+    TCP keepalives are on. This connection sits idle for as long as the job
+    spends inside Ollama, which over a VPN is long enough to be dropped — see
+    `Connection` for the same problem on the working connection.
+    """
+    conn = psycopg.connect(
+        config.require_database_url(),
+        autocommit=True,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
+    )
+    key = _lock_key()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT pg_try_advisory_lock(%s)", (key,))
+            acquired = cur.fetchone()[0]
+        yield acquired
+    finally:
         try:
-            conn = psycopg.connect(config.require_database_url(), autocommit=True)
-            with conn.cursor() as cur:
-                cur.execute("SELECT pg_try_advisory_lock(%s, %s)", (self._NAMESPACE, self._key))
-                got = bool(cur.fetchone()[0])
+            # Closing the connection would release it anyway; doing it
+            # explicitly means a caller that keeps the process alive (--watch)
+            # frees the lock between passes rather than at exit.
+            if acquired:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT pg_advisory_unlock(%s)", (key,))
         except psycopg.Error:
-            return False
-        if got:
-            self._conn = conn
-        else:
+            pass  # connection already gone; the server released the lock with it
+        finally:
             conn.close()
-        return got
-
-    def held(self) -> bool:
-        if self._conn is not None and not self._conn.closed:
-            try:
-                with self._conn.cursor() as cur:
-                    cur.execute("SELECT 1")
-                return True
-            except psycopg.Error:
-                pass
-        return self.acquire()
-
-    def release(self) -> None:
-        if self._conn is not None:
-            try:
-                self._conn.close()  # releases the lock
-            except psycopg.Error:
-                pass
-            self._conn = None
 
 
 def embedding_dims(conn: Connection) -> int | None:
@@ -307,9 +330,11 @@ def insert_points(conn: Connection, rows: list[dict]) -> int:
         cur.executemany(
             """
             INSERT INTO points
-                (answer_id, point_text, embedding, sentiment_label, is_violation, processing_status)
+                (answer_id, point_text, embedding, sentiment_label, is_violation,
+                 violation_status, violation_type, processing_status)
             VALUES (%(answer_id)s, %(point_text)s, %(embedding)s, %(sentiment_label)s,
-                    %(is_violation)s, %(processing_status)s)
+                    %(is_violation)s, %(violation_status)s, %(violation_type)s,
+                    %(processing_status)s)
             """,
             rows,
         )
@@ -366,14 +391,24 @@ def points_for_relabel(
         return [(row[0], row[1]) for row in cur.fetchall()]
 
 
+# A reviewer's confirmed / dismissed verdict outranks any classifier rerun.
+_REVIEWED = "violation_status IN ('confirmed', 'dismissed')"
+
+
 def update_point_labels(conn: Connection, rows: list[dict]) -> int:
     if not rows:
         return 0
     with conn.cursor() as cur:
         cur.executemany(
-            """
+            f"""
             UPDATE points
-            SET sentiment_label = %(sentiment_label)s, is_violation = %(is_violation)s
+            SET sentiment_label = %(sentiment_label)s,
+                is_violation = CASE WHEN {_REVIEWED} THEN is_violation
+                                    ELSE %(is_violation)s END,
+                violation_status = CASE WHEN {_REVIEWED} THEN violation_status
+                                        ELSE %(violation_status)s END,
+                violation_type = CASE WHEN {_REVIEWED} THEN violation_type
+                                      ELSE %(violation_type)s END
             WHERE id = %(id)s
             """,
             rows,
@@ -386,11 +421,16 @@ def update_point_features(conn: Connection, rows: list[dict]) -> int:
         return 0
     with conn.cursor() as cur:
         cur.executemany(
-            """
+            f"""
             UPDATE points
             SET embedding = %(embedding)s,
                 sentiment_label = COALESCE(%(sentiment_label)s, sentiment_label),
-                is_violation = COALESCE(%(is_violation)s, is_violation),
+                is_violation = CASE WHEN {_REVIEWED} THEN is_violation
+                                    ELSE COALESCE(%(is_violation)s, is_violation) END,
+                violation_status = CASE WHEN {_REVIEWED} THEN violation_status
+                                        ELSE COALESCE(%(violation_status)s, violation_status) END,
+                violation_type = CASE WHEN {_REVIEWED} THEN violation_type
+                                      ELSE COALESCE(%(violation_type)s, violation_type) END,
                 processing_status = %(processing_status)s
             WHERE id = %(id)s
             """,
