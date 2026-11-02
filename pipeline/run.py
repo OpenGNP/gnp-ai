@@ -464,7 +464,7 @@ def cluster_form(
 
 # ── CLI ────────────────────────────────────────────────────────────────
 
-def _stages(args) -> list[str]:
+def _lock_stages(args) -> list[str]:
     """Stages this run writes to. --backfill/--relabel write labels, like ingest."""
     if args.report or args.dry_run:
         return []
@@ -573,7 +573,7 @@ def main() -> None:
     if args.ingest_only and args.cluster_only:
         ap.error("--ingest-only and --cluster-only are mutually exclusive")
 
-    locks = _take_locks(_stages(args))
+    locks = _take_locks(_lock_stages(args))
     conn = db.connect()
     try:
         if args.watch:
