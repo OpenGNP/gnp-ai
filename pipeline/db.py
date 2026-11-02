@@ -13,11 +13,8 @@ statement here is deliberately narrow:
 
 from __future__ import annotations
 
-import hashlib
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterator
 
 import numpy as np
 import psycopg
@@ -120,73 +117,54 @@ def connect() -> Connection:
     return Connection()
 
 
-# ── job lock ───────────────────────────────────────────────────────────
+class StageLock:
+    """One process per stage across every machine, using its own connection."""
 
-def _lock_key() -> int:
-    """A stable 64-bit key, per schema.
+    _NAMESPACE = 0x676E70
+    _STAGES = {"ingest": 1, "cluster": 2}
 
-    Scoped to the schema so a run against `test` cannot block one against
-    `public`, and derived by hash rather than written as a literal so the two
-    can never be given the same number by accident.
-    """
-    digest = hashlib.blake2b(
-        f"gnp-ai:job:{config.DB_SCHEMA}".encode(), digest_size=8
-    ).digest()
-    return int.from_bytes(digest, "big", signed=True)
-
-
-@contextmanager
-def job_lock() -> Iterator[bool]:
-    """Hold a Postgres advisory lock for one pass, or report that another has it.
-
-    Two ingests over the same answers duplicate every point they touch:
-    `pending_answers()` reads the work queue and `mark_decomposed()` retires it,
-    but nothing between them stops a second process reading the same queue
-    before the first commits. That is not hypothetical — it happened, and cost
-    51 duplicate points across 27 answers.
-
-    An advisory lock rather than a lock table: the pipeline is the second writer
-    on a database the server owns, and this needs no schema of its own. The lock
-    lives on a dedicated connection, not the caller's, because `Connection`
-    deliberately re-dials when the network has dropped it — and a re-dial would
-    silently hand the lock back while the job carried on believing it held it.
-
-    `pg_try_advisory_lock` never waits: a second run is told to come back later
-    rather than queueing behind a job that may take an hour. If the lock
-    connection is lost mid-run the lock is released, which is the behaviour
-    before this existed, not worse.
-
-    TCP keepalives are on. This connection sits idle for as long as the job
-    spends inside Ollama, which over a VPN is long enough to be dropped — see
-    `Connection` for the same problem on the working connection.
-    """
-    conn = psycopg.connect(
-        config.require_database_url(),
-        autocommit=True,
-        keepalives=1,
-        keepalives_idle=30,
-        keepalives_interval=10,
-        keepalives_count=5,
-    )
-    key = _lock_key()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT pg_try_advisory_lock(%s)", (key,))
-            acquired = cur.fetchone()[0]
-        yield acquired
-    finally:
+    def __init__(self, stage: str) -> None:
         try:
-            # Closing the connection would release it anyway; doing it
-            # explicitly means a caller that keeps the process alive (--watch)
-            # frees the lock between passes rather than at exit.
-            if acquired:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT pg_advisory_unlock(%s)", (key,))
-        except psycopg.Error:
-            pass  # connection already gone; the server released the lock with it
-        finally:
-            conn.close()
+            self._key = self._STAGES[stage]
+        except KeyError:
+            raise ValueError(f"unknown pipeline stage: {stage}") from None
+        self._conn: psycopg.Connection | None = None
 
+    def acquire(self) -> bool:
+        self.release()
+        try:
+            conn = psycopg.connect(config.require_database_url(), autocommit=True)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT pg_try_advisory_lock(%s, %s)",
+                    (self._NAMESPACE, self._key),
+                )
+                acquired = bool(cur.fetchone()[0])
+        except psycopg.Error:
+            return False
+        if acquired:
+            self._conn = conn
+        else:
+            conn.close()
+        return acquired
+
+    def held(self) -> bool:
+        if self._conn is not None and not self._conn.closed:
+            try:
+                with self._conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                return True
+            except psycopg.Error:
+                pass
+        return self.acquire()
+
+    def release(self) -> None:
+        if self._conn is not None:
+            try:
+                self._conn.close()
+            except psycopg.Error:
+                pass
+            self._conn = None
 
 def embedding_dims(conn: Connection) -> int | None:
     """Dimension the points.embedding column is declared with, or None when the

@@ -464,17 +464,39 @@ def cluster_form(
 
 # ── CLI ────────────────────────────────────────────────────────────────
 
+def _stages(args) -> list[str]:
+    """Stages this run writes to. --backfill/--relabel write labels, like ingest."""
+    if args.report or args.dry_run:
+        return []
+    stages = []
+    if not args.cluster_only or args.backfill or args.relabel:
+        stages.append("ingest")
+    if not args.ingest_only:
+        stages.append("cluster")
+    return stages
+
+
+def _take_locks(stages: list[str]) -> list[db.StageLock]:
+    locks = []
+    for stage in stages:
+        lock = db.StageLock(stage)
+        if not lock.acquire():
+            for held in locks:
+                held.release()
+            raise SystemExit(
+                f"another {stage} process holds the lock — most likely the "
+                f"gnp-ai@{stage} worker. Stop it first "
+                f"(sudo systemctl stop gnp-ai@{stage}), or add --dry-run."
+            )
+        locks.append(lock)
+    return locks
+
+
 def pass_once(conn, args) -> bool:
-    """One pass. Returns False when another run holds the job lock.
+    """One pass.
 
-    Everything below ingest writes the same tables, so the lock covers the
-    whole mutating pass rather than ingest alone: a re-cluster running against
-    points a concurrent ingest is still inserting would read a half-written
-    corpus.
-
-    --report and --dry-run write nothing and are not locked — a read-only look
-    at the database should never be refused because a job is running, which is
-    exactly when someone is most likely to want one.
+    Mutating callers acquire the relevant stage locks in ``main`` before
+    entering this function. Reports and dry runs do not acquire locks.
     """
     if args.report:
         text, points = report.build(conn)
@@ -488,11 +510,7 @@ def pass_once(conn, args) -> bool:
         _stages(conn, args)
         return True
 
-    with db.job_lock() as acquired:
-        if not acquired:
-            _log("another run holds the job lock — skipping this pass")
-            return False
-        _stages(conn, args)
+    _stages(conn, args)
     return True
 
 
@@ -564,11 +582,7 @@ def main() -> None:
                 pass_once(conn, args)
                 time.sleep(args.watch)
         else:
-            # A single pass that found the lock held did no work. Exit non-zero
-            # so a cron or a shell `&&` chain can tell "nothing to do" from
-            # "someone else is doing it" — the second is worth retrying.
-            if not pass_once(conn, args):
-                sys.exit(75)  # EX_TEMPFAIL
+            pass_once(conn, args)
     except KeyboardInterrupt:
         _log("stopped")
         sys.exit(0)

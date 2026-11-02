@@ -67,8 +67,8 @@ python -m pipeline.run --report                  # what every stage produced, re
 python -m pipeline.worker --stage ingest         # one worker in the foreground
 ```
 
-A run that writes takes the same lock as the worker for its stage, so it
-refuses to start while that worker is running. Stop the worker first
+A run that writes takes the stage lock used by the worker, so it refuses to
+start while that worker is running. Stop the worker first
 (`sudo systemctl stop gnp-ai@cluster`) or add `--dry-run`.
 
 ## The two workers
