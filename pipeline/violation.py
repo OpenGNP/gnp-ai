@@ -2,7 +2,7 @@
 
 unitary/toxic-bert is multi-label (toxic, severe_toxic, obscene, threat, insult,
 identity_hate). A point is flagged when any label clears the threshold, which
-maps onto the single boolean the schema offers: points.is_violation.
+maps onto points.violation_status (possible | violation).
 
 Note what this does and does not measure: it detects abusive or offensive
 *language*, not how serious the *problem being reported* is. "The lab has no
@@ -258,7 +258,7 @@ NO_LABELS = {"is_violation": None, "violation_status": None, "violation_type": N
 
 def label_zeroshot(texts: list[str]) -> list[dict]:
     """The violation columns of points for each text. violation_status is
-    none | possible | violation; confirmed and dismissed are set by a reviewer,
+    none | possible | violation; a reviewer's call goes in violation_reviewed_status,
     never here."""
     rows = []
     for text in texts:

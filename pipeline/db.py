@@ -300,18 +300,18 @@ def insert_points(conn: Connection, rows: list[dict]) -> int:
 
     chk_status_topic ties the two columns together: a point is 'assigned'
     exactly when it carries a topic, so a new point is 'pending' with none.
-    chk_labels_together requires sentiment_label and is_violation to be set or
-    unset together, which --skip-sentiment satisfies by leaving both NULL."""
+    The violation flag is violation_status (none | possible | violation); there
+    is no separate boolean column."""
     if not rows:
         return 0
     with conn.cursor() as cur:
         cur.executemany(
             """
             INSERT INTO points
-                (answer_id, point_text, embedding, sentiment_label, is_violation,
+                (answer_id, point_text, embedding, sentiment_label,
                  violation_status, violation_type, processing_status)
             VALUES (%(answer_id)s, %(point_text)s, %(embedding)s, %(sentiment_label)s,
-                    %(is_violation)s, %(violation_status)s, %(violation_type)s,
+                    %(violation_status)s, %(violation_type)s,
                     %(processing_status)s)
             """,
             rows,
@@ -369,24 +369,16 @@ def points_for_relabel(
         return [(row[0], row[1]) for row in cur.fetchall()]
 
 
-# A reviewer's confirmed / dismissed verdict outranks any classifier rerun.
-_REVIEWED = "violation_status IN ('confirmed', 'dismissed')"
-
-
 def update_point_labels(conn: Connection, rows: list[dict]) -> int:
     if not rows:
         return 0
     with conn.cursor() as cur:
         cur.executemany(
-            f"""
+            """
             UPDATE points
             SET sentiment_label = %(sentiment_label)s,
-                is_violation = CASE WHEN {_REVIEWED} THEN is_violation
-                                    ELSE %(is_violation)s END,
-                violation_status = CASE WHEN {_REVIEWED} THEN violation_status
-                                        ELSE %(violation_status)s END,
-                violation_type = CASE WHEN {_REVIEWED} THEN violation_type
-                                      ELSE %(violation_type)s END
+                violation_status = %(violation_status)s,
+                violation_type = %(violation_type)s
             WHERE id = %(id)s
             """,
             rows,
@@ -399,16 +391,12 @@ def update_point_features(conn: Connection, rows: list[dict]) -> int:
         return 0
     with conn.cursor() as cur:
         cur.executemany(
-            f"""
+            """
             UPDATE points
             SET embedding = %(embedding)s,
                 sentiment_label = COALESCE(%(sentiment_label)s, sentiment_label),
-                is_violation = CASE WHEN {_REVIEWED} THEN is_violation
-                                    ELSE COALESCE(%(is_violation)s, is_violation) END,
-                violation_status = CASE WHEN {_REVIEWED} THEN violation_status
-                                        ELSE COALESCE(%(violation_status)s, violation_status) END,
-                violation_type = CASE WHEN {_REVIEWED} THEN violation_type
-                                      ELSE COALESCE(%(violation_type)s, violation_type) END,
+                violation_status = COALESCE(%(violation_status)s, violation_status),
+                violation_type = COALESCE(%(violation_type)s, violation_type),
                 processing_status = %(processing_status)s
             WHERE id = %(id)s
             """,
@@ -430,7 +418,7 @@ def clusterable_points(conn: Connection, form_id: int) -> list[ClusterablePoint]
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT p.id, p.point_text, p.embedding, p.sentiment_label, p.is_violation,
+            SELECT p.id, p.point_text, p.embedding, p.sentiment_label, (p.violation_status IN ('possible', 'violation')),
                    p.created_at, p.canonical_topic_id
             FROM points p
             JOIN answers a ON a.id = p.answer_id

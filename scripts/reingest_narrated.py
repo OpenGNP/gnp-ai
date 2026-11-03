@@ -67,7 +67,7 @@ def main() -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT p.id, p.answer_id, p.point_text, p.sentiment_label, p.is_violation,
+            SELECT p.id, p.answer_id, p.point_text, p.sentiment_label, (p.violation_status IN ('possible', 'violation')),
                    p.canonical_topic_id, p.processing_status, s.form_id
             FROM points p
             JOIN answers a ON a.id = p.answer_id

@@ -4,7 +4,7 @@ Every stage persists its output, so nothing needs re-running to analyse it:
 
     decompose   answers.answer_text -> the points.point_text rows under it
     sentiment   points.sentiment_label
-    violation   points.is_violation
+    violation   points.violation_status (possible | violation)
     embedding   points.embedding (reported as dimensions, not dumped)
     clustering  points.canonical_topic_id + assignment_confidence
 
@@ -32,7 +32,7 @@ POINTS_SQL = """
            a.answer_text,
            p.point_text,
            p.sentiment_label,
-           p.is_violation,
+           (p.violation_status IN ('possible', 'violation')) AS is_violation,
            p.canonical_topic_id AS topic_id,
            c.canonical_name     AS topic_name,
            p.assignment_confidence,
@@ -58,7 +58,7 @@ TOPICS_SQL = """
            count(*) FILTER (WHERE p.sentiment_label = 'positive')        AS positive_count,
            count(*) FILTER (WHERE p.sentiment_label = 'neutral')         AS neutral_count,
            count(*) FILTER (WHERE p.sentiment_label = 'negative')        AS negative_count,
-           count(*) FILTER (WHERE p.is_violation)                           AS violation_count
+           count(*) FILTER (WHERE p.violation_status IN ('possible', 'violation')) AS violation_count
     FROM canonical_topics c
     LEFT JOIN points p ON p.canonical_topic_id = c.id
     GROUP BY c.id, c.form_id, c.canonical_name, c.representative_keywords
