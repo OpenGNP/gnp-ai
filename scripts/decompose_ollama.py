@@ -57,8 +57,8 @@ mentioned earlier.
 in the SAME point.
 10. Only create a new point when the idea is clearly different.
 11. Every major idea in the feedback must appear in the output.
-12. If a sentence depends on context, include the subject (for example the course
-name like CSC102)"""
+12. If a sentence depends on context, include the subject (for example the name of
+the thing being discussed)"""
 
 # v0 คือ prompt ที่ตีพิมพ์ในเปเปอร์ทุกคำ — ใช้เป็น control เทียบผล
 TASKS = {
@@ -157,7 +157,7 @@ Return ONLY the JSON array."""
 # commit to a number before it starts writing, which stops it discovering extra
 # points mid-list.
 
-FEWSHOT_PROMPT = """Split student feedback into points. Copy the writer's wording.
+FEWSHOT_PROMPT = """Split feedback into points. Copy the writer's wording.
 
 Feedback: The knowledge does cover overall things but the teaching was a bit fast
 Points: ["The knowledge does cover overall things but the teaching was a bit fast"]
@@ -174,7 +174,7 @@ Points: ["Everything is fine, all the class and lab is good but maybe SIT can op
 Feedback: {raw_text}
 Points:"""
 
-COUNT_PROMPT = """Read this student feedback.
+COUNT_PROMPT = """Read this feedback.
 
 Step 1: how many DIFFERENT problems or praises does it report? A sentence joined by
 and / but / though is usually one. A list of examples is one.
@@ -184,7 +184,7 @@ Feedback: {raw_text}
 
 Answer with only this JSON object: {{"count": 1, "points": ["..."]}}"""
 
-ANNOTATED_PROMPT = """Split student feedback into points.
+ANNOTATED_PROMPT = """Split feedback into points.
 
 For each feedback, name what each part is about, then decide.
 Parts about the SAME thing -> one point. Parts about DIFFERENT things -> one point each.
@@ -254,7 +254,7 @@ def narrated(points: list[str]) -> list[int]:
     return [i for i, p in enumerate(points) if NARRATED_RE.search(p)]
 
 
-REPAIR_PROMPT = """These points were extracted from one piece of student feedback, \
+REPAIR_PROMPT = """These points were extracted from one piece of feedback, \
 but some are written as a report about the writer instead of in the writer's own voice.
 
 Original feedback:
@@ -271,7 +271,8 @@ thing. Change only the voice:
 - Never describe what the writer does ("the user requests", "the user mentions", \
 "the user is experiencing"). Say what they said.
 - "Request for Lockers" becomes "I want Lockers".
-- "User mentions not having talked to SIT" becomes "I've never really talked to SIT".
+- "User mentions not having talked to the office" becomes "I've never really
+  talked to the office".
 - A point already in the writer's voice is copied unchanged.
 - Take the wording from the original feedback wherever you can.
 

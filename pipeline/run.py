@@ -231,6 +231,9 @@ def backfill(conn, *, dry_run: bool, skip_sentiment: bool, form_ids: list[int] |
     return len(rows)
 
 
+RELABEL_CHUNK = 50
+
+
 def relabel(conn, *, dry_run: bool, form_ids: list[int] | None = None) -> int:
     """Re-run the classifiers over points the pipeline owns. Needed whenever
     SENTIMENT_MODEL, VIOLATION_MODEL or VIOLATION_THRESHOLD changes."""
@@ -244,19 +247,28 @@ def relabel(conn, *, dry_run: bool, form_ids: list[int] | None = None) -> int:
         _log("relabel: dry run, nothing written")
         return 0
 
-    texts = [text for _, text in targets]
-    labels = sentiment.classify(texts)
-    flags = violation.label_zeroshot(texts)
+    # Written chunk by chunk: the zero-shot model takes seconds per point, so a
+    # stopped run keeps what it finished and the log shows it moving.
+    done = flagged = 0
+    for start in range(0, len(targets), RELABEL_CHUNK):
+        chunk = targets[start:start + RELABEL_CHUNK]
+        texts = [text for _, text in chunk]
+        labels = sentiment.classify(texts)
+        flags = violation.label_zeroshot(texts)
 
-    rows = [
-        {"id": point_id, "sentiment_label": label, **flag}
-        for (point_id, _), label, flag in zip(targets, labels, flags)
-    ]
-    with conn.transaction():
-        db.update_point_labels(conn, rows)
+        rows = [
+            {"id": point_id, "sentiment_label": label, **flag}
+            for (point_id, _), label, flag in zip(chunk, labels, flags)
+        ]
+        with conn.transaction():
+            db.update_point_labels(conn, rows)
 
-    _log(f"relabel: updated {len(rows)} point(s), {sum(1 for r in rows if r['is_violation'])} flagged")
-    return len(rows)
+        done += len(rows)
+        flagged += sum(1 for r in rows if r["is_violation"])
+        _log(f"  relabel: {done}/{len(targets)} written, {flagged} flagged so far")
+
+    _log(f"relabel: updated {done} point(s), {flagged} flagged")
+    return done
 
 
 # ── stage: cluster ─────────────────────────────────────────────────────

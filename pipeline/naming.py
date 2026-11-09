@@ -13,7 +13,7 @@ import httpx
 
 from . import llm
 
-SYSTEM_PROMPT = "You label clusters of student feedback. You answer with JSON only, no explanation."
+SYSTEM_PROMPT = "You label clusters of feedback. You answer with JSON only, no explanation."
 
 TEMPLATE = """These feedback points were grouped together because they are about the same issue.
 
@@ -25,7 +25,7 @@ Points:
 Write a title and a summary for this group.
 
 title: 2-5 words naming the shared issue as a topic heading, like "Wi-Fi Reliability" or
-"Course Pacing". Not a sentence. Do not use the words "feedback", "students" or "issues".
+"Course Pacing". Not a sentence. Do not use the words "feedback", "respondents" or "issues".
 summary: one sentence describing what the group is complaining about or praising, specific
 to these points.
 
