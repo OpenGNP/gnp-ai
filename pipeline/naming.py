@@ -25,7 +25,7 @@ Points:
 Write a title and a summary for this group.
 
 title: 2-5 words naming the shared issue as a topic heading, like "Wi-Fi Reliability" or
-"Course Pacing". Not a sentence. Do not use the words "feedback", "respondents" or "issues".
+"Response Times". Not a sentence. Do not use the words "feedback", "respondents" or "issues".
 summary: one sentence describing what the group is complaining about or praising, specific
 to these points.
 
