@@ -57,8 +57,8 @@ mentioned earlier.
 in the SAME point.
 10. Only create a new point when the idea is clearly different.
 11. Every major idea in the feedback must appear in the output.
-12. If a sentence depends on context, include the subject (for example the course
-name like CSC102)"""
+12. If a sentence depends on context, include the subject (for example the name of
+the thing being discussed)"""
 
 # v0 คือ prompt ที่ตีพิมพ์ในเปเปอร์ทุกคำ — ใช้เป็น control เทียบผล
 TASKS = {
@@ -79,7 +79,7 @@ TASKS = {
         "unrelated concerns. If in doubt, keep it as a single point.\n\n"
         "A list of examples inside one sentence is ONE point. Keep the list "
         "together in that point instead of making a point per item. For example "
-        "\"thanks for help with transfer credit, study plan and course selection\" "
+        "\"thanks for help with the booking, the paperwork and the schedule\" "
         "is a single point, not three.\n\n"
         "Never output the same idea twice in different wording. If two candidate "
         "points describe the same thing, keep only the one closest to the "
@@ -96,7 +96,7 @@ TASKS = {
         "unrelated concerns. If in doubt, keep it as a single point.\n\n"
         "A list inside one sentence is ONE point, whether it lists things or "
         "qualities. Keep the list together instead of making a point per item. "
-        "\"thanks for help with transfer credit, study plan and course selection\" "
+        "\"thanks for help with the booking, the paperwork and the schedule\" "
         "is one point, not three. \"it is okay, clean and well maintained\" is one "
         "point, not three.\n\n"
         "Never output the same idea twice in different wording. If two candidate "
@@ -104,7 +104,7 @@ TASKS = {
         "original text.\n\n"
         "If the feedback never names what it is about, leave the pronoun exactly "
         "as the writer wrote it. Do NOT invent a subject: \"it is good\" stays "
-        "\"it is good\", never \"the course is good\"."
+        "\"it is good\", never \"the service is good\"."
     ),
     # v4 = v3 plus the conjunction failure: clauses joined by and / but / though
     # were being cut apart even when they describe one thing ("the building is
@@ -123,8 +123,8 @@ TASKS = {
         "is one point — a qualification, apology or acknowledgement is never a "
         "point of its own.\n\n"
         "A list inside one sentence is ONE point, whether it lists things or "
-        "qualities. \"thanks for help with transfer credit, study plan and course "
-        "selection\" is one point, not three. \"it is okay, clean and well "
+        "qualities. \"thanks for help with the booking, the paperwork and the "
+        "schedule\" is one point, not three. \"it is okay, clean and well "
         "maintained\" is one point, not three.\n\n"
         "If two candidate points describe the same thing, merge them into the one "
         "closest to the original text. Never drop content: every idea in the "
@@ -153,28 +153,29 @@ Return ONLY the JSON array."""
 # v0-v4 all share BASE_RULES and differ only in instructions, and all of them
 # split at conjunctions no matter how directly they are told not to. These two
 # change the mechanism instead: `fewshot` teaches by demonstration (the "but"
-# example is a real gold pair that stays one point), and `count` makes the model
+# example is a real gold pair that stays one point, with its nouns made
+# organization-neutral), and `count` makes the model
 # commit to a number before it starts writing, which stops it discovering extra
 # points mid-list.
 
-FEWSHOT_PROMPT = """Split student feedback into points. Copy the writer's wording.
+FEWSHOT_PROMPT = """Split feedback into points. Copy the writer's wording.
 
-Feedback: The knowledge does cover overall things but the teaching was a bit fast
-Points: ["The knowledge does cover overall things but the teaching was a bit fast"]
+Feedback: The material does cover overall things but the training was a bit fast
+Points: ["The material does cover overall things but the training was a bit fast"]
 
-Feedback: I found that our curriculum has been made according to universal standards
-Points: ["I found that our curriculum has been made according to universal standards"]
+Feedback: I found that our process has been made according to universal standards
+Points: ["I found that our process has been made according to universal standards"]
 
-Feedback: Please add monitors to Common Rooms, and add better WiFi connectivity to CB2 classroom as it keeps disconnecting
-Points: ["Please add monitors to Common Rooms.", "Please add better WiFi connectivity to the CB2 classroom as the WiFi keeps disconnecting."]
+Feedback: Please add monitors to Common Rooms, and add better WiFi connectivity to the second floor meeting room as it keeps disconnecting
+Points: ["Please add monitors to Common Rooms.", "Please add better WiFi connectivity to the second floor meeting room as the WiFi keeps disconnecting."]
 
-Feedback: Everything is fine, all the class and lab is good but maybe SIT can open the study room until night
-Points: ["Everything is fine, all the class and lab is good but maybe SIT can open the study room until night"]
+Feedback: Everything is fine, all the rooms and equipment are good but maybe the office can open the quiet room until night
+Points: ["Everything is fine, all the rooms and equipment are good but maybe the office can open the quiet room until night"]
 
 Feedback: {raw_text}
 Points:"""
 
-COUNT_PROMPT = """Read this student feedback.
+COUNT_PROMPT = """Read this feedback.
 
 Step 1: how many DIFFERENT problems or praises does it report? A sentence joined by
 and / but / though is usually one. A list of examples is one.
@@ -184,27 +185,27 @@ Feedback: {raw_text}
 
 Answer with only this JSON object: {{"count": 1, "points": ["..."]}}"""
 
-ANNOTATED_PROMPT = """Split student feedback into points.
+ANNOTATED_PROMPT = """Split feedback into points.
 
 For each feedback, name what each part is about, then decide.
 Parts about the SAME thing -> one point. Parts about DIFFERENT things -> one point each.
 Copy the writer's wording.
 
-Feedback: The knowledge does cover overall things but the teaching was a bit fast
-About: the course (knowledge) | the course (teaching speed) -> same thing
-Points: ["The knowledge does cover overall things but the teaching was a bit fast"]
+Feedback: The material does cover overall things but the training was a bit fast
+About: the material (content) | the material (pace) -> same thing
+Points: ["The material does cover overall things but the training was a bit fast"]
 
-Feedback: I think all of the CSC courses are useful, however I am unsure of the purpose for some GEN courses
-About: CSC courses | GEN courses -> different things
-Points: ["I think all of the CSC courses are useful", "I am unsure of the purpose for some GEN courses"]
+Feedback: I think all of the safety sessions are useful, however I am unsure of the purpose for some general sessions
+About: safety sessions | general sessions -> different things
+Points: ["I think all of the safety sessions are useful", "I am unsure of the purpose for some general sessions"]
 
 Feedback: the outlets are dead, though I understand the constraints
 About: the outlets | a qualification about the outlets -> same thing
 Points: ["the outlets are dead, though I understand the constraints"]
 
-Feedback: Please add monitors to Common Rooms, and add better WiFi to CB2 classroom
+Feedback: Please add monitors to Common Rooms, and add better WiFi to the second floor meeting room
 About: monitors | WiFi -> different things
-Points: ["Please add monitors to Common Rooms.", "Please add better WiFi to the CB2 classroom."]
+Points: ["Please add monitors to Common Rooms.", "Please add better WiFi to the second floor meeting room."]
 
 Feedback: {raw_text}
 About:"""
@@ -254,7 +255,7 @@ def narrated(points: list[str]) -> list[int]:
     return [i for i, p in enumerate(points) if NARRATED_RE.search(p)]
 
 
-REPAIR_PROMPT = """These points were extracted from one piece of student feedback, \
+REPAIR_PROMPT = """These points were extracted from one piece of feedback, \
 but some are written as a report about the writer instead of in the writer's own voice.
 
 Original feedback:
@@ -267,11 +268,12 @@ Rewrite EVERY point in the writer's own voice, exactly as the original feedback 
 is written. Keep the same number of points, in the same order, each about the same \
 thing. Change only the voice:
 
-- Never begin with "The user", "The student", "The respondent" or "The writer".
+- Never begin with "The user", "The respondent" or "The writer".
 - Never describe what the writer does ("the user requests", "the user mentions", \
 "the user is experiencing"). Say what they said.
 - "Request for Lockers" becomes "I want Lockers".
-- "User mentions not having talked to SIT" becomes "I've never really talked to SIT".
+- "User mentions not having talked to the office" becomes "I've never really
+  talked to the office".
 - A point already in the writer's voice is copied unchanged.
 - Take the wording from the original feedback wherever you can.
 

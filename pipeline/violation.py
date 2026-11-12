@@ -51,11 +51,11 @@ def flag(texts: list[str]) -> list[bool]:
 # bribes is a violation, and an angry rant about the cafeteria is not.
 
 LLM_SYSTEM_PROMPT = (
-    "You review student feedback for reports of misconduct. You answer with JSON only."
+    "You review feedback for reports of misconduct. You answer with JSON only."
 )
 
 # The rules below mirror docs/violation_guideline.md; change both together.
-LLM_TEMPLATE = """Classify the incident reported in student feedback.
+LLM_TEMPLATE = """Classify the incident reported in feedback.
 
 Classify reported conduct, not the writer's opinion, emotion, or preferred
 outcome. These categories are screening labels, not verified findings.
@@ -99,23 +99,24 @@ Do not infer severe danger from "dirty", "old", "broken", or "unsafe" alone.
 Do not classify something as legal solely because the writer calls it illegal.
 
 ethics
-Reported misuse of academic or professional responsibilities, authority,
+Reported misuse of professional responsibilities, authority,
 confidential information, or entrusted resources.
 
 Examples:
-- Cheating, plagiarism, fabricated research, or leaking restricted exam answers.
-- Altering grades for personal benefit or giving preferential treatment because
-  of a personal relationship.
-- Using control over grades, scholarships, or employment to demand personal
+- Plagiarism, fabricated results, falsified records, or leaking restricted or
+  confidential information.
+- Altering records, results, or evaluations for personal benefit, or giving
+  preferential treatment because of a personal relationship.
+- Using control over pay, evaluation, funding, or employment to demand personal
   services or favors.
 - Punishing someone for reporting misconduct.
 - Concealing misconduct or pressuring someone to withdraw a report.
-- Disclosing confidential student records without authorization.
-- Taking credit for a student's work.
+- Disclosing confidential personal records without authorization.
+- Taking credit for someone else's work.
 - Failing to act on a reported serious hazard within one's responsibility.
 
-Poor teaching, mistakes, delays, and disagreement with grading do not by
-themselves establish professional misconduct. Unequal outcomes alone do not
+Poor performance, mistakes, delays, and disagreement with an assessment do not
+by themselves establish professional misconduct. Unequal outcomes alone do not
 establish favoritism or discrimination.
 
 moral
@@ -135,8 +136,8 @@ none
 No qualifying conduct or concrete severe safety hazard is described.
 
 Examples:
-- Complaints about teaching, workload, fees, schedules, facilities, or service.
-- Difficult exams or dissatisfaction with a grade without reported misconduct.
+- Complaints about workload, cost, schedules, facilities, or service.
+- Dissatisfaction with an assessment or outcome without reported misconduct.
 - Disagreement with a policy or administrative decision.
 - General accusations without a described action.
 - Feelings of anger, distress, or dissatisfaction without qualifying conduct.
@@ -201,20 +202,21 @@ def flag_llm(http: httpx.Client, texts: list[str]) -> list[bool | None]:
 # labels. The softmax always shares out 1.0, so praise like "everything was
 # alright" landed ~0.75 on the violation labels just because 8 of 11 labels were
 # violations; that ran the 169-case set at 59%. Independent scores let every
-# label say no. On that set (data/violation_testset.csv), multi_label with this
-# template gives F1 0.90 (P 1.00, R 0.81) at threshold 0.08, against 0.72 for the
-# best softmax variant.
+# label say no. On that set (data/violation_testset.csv, 229 cases: 169 written
+# around a university, 60 around an ordinary workplace), multi_label with this
+# template gives F1 0.86 (P 0.95, R 0.78) at threshold 0.08, holding 0.85-0.87
+# from 0.05 to 0.12, against 0.72 for the best softmax variant.
 ZEROSHOT_LABELS = {
     "physical violence, a threat to hurt someone, or forced drinking or hazing": "legal",
     "sexual harassment, unwanted touching, or sexual coercion": "legal",
     "a demand for money, a bribe, theft, fraud, or extortion": "legal",
     "a blocked or locked fire exit, exposed wiring, a gas leak, unlabelled or dangerous "
     "chemicals, or another hazard that could seriously injure people": "legal",
-    "cheating, plagiarism, an exam answer key leaked or sold before the exam, "
-    "or grades changed for personal benefit": "ethics",
-    "someone using power over grades or jobs to force a student into unpaid work or favours, "
-    "or punishing a student for complaining": "ethics",
-    "students' personal information such as health records, names or ID numbers "
+    "cheating, plagiarism, copied work, exam or test answers leaked or sold beforehand, "
+    "or grades, scores or records changed for personal benefit": "ethics",
+    "someone using power over grades, pay or jobs to force a person into unpaid work or "
+    "favours, or punishing a person for complaining": "ethics",
+    "people's personal information such as health records, names or ID numbers "
     "made public without permission": "ethics",
     "a person insulted, humiliated, mocked, or harassed by someone": "moral",
 }
@@ -222,7 +224,14 @@ ZEROSHOT_LABELS = {
 # Swept against "This feedback reports {}." (F1 0.89, but only at a knife-edge
 # 0.03), "This university feedback is about {}." (0.90) and "...describes an
 # actual incident of {}." (0.85). This one holds 0.88-0.90 from 0.05 to 0.10.
-ZEROSHOT_HYPOTHESIS = "The student writing this feedback describes {}."
+#
+# "person" rather than "student": the platform is not only for universities, and
+# naming the writer a student made the whole set read as a campus. On the 229-case
+# set it costs nothing and gains category accuracy. The labels above went the same
+# way — they name the act in both vocabularies ("exam or test", "grades, scores or
+# records") rather than one, because NLI matches on the words it is given: dropping
+# "cheating" and "grades" for abstract "falsified results" lost recall 0.81 -> 0.69.
+ZEROSHOT_HYPOTHESIS = "The person writing this feedback describes {}."
 
 _zeroshot = None
 
