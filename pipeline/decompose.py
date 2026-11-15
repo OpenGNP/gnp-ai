@@ -20,7 +20,7 @@ from scripts.decompose_ollama import (
     parse_points,
 )
 
-from . import config, llm
+from . import config, llm, translate
 
 # What a second clause looks like: a list separator, a joining word with space
 # on both sides, or a sentence that ends and starts again.
@@ -67,7 +67,7 @@ def output_budget(prompt: str, text: str) -> int:
 def decompose(http: httpx.Client, text: str) -> tuple[list[str], str]:
     """Returns (points, status). On a parse failure the whole answer is kept as
     a single point — losing a respondent's feedback is worse than a coarse split."""
-    text = text.strip()
+    text = translate.to_english(text.strip())
     if not needs_splitting(text):
         # Kept verbatim rather than dropped: "good" is still a positive
         # response, and the classifiers downstream read it like any other

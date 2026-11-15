@@ -33,6 +33,7 @@ DECOMPOSE_MAX_ATTEMPTS = int(os.environ.get("DECOMPOSE_MAX_ATTEMPTS", "3"))
 
 # Answers this short with no clause break skip the model (decompose.needs_splitting).
 SHORT_ANSWER_WORDS = int(os.environ.get("SHORT_ANSWER_WORDS", "6"))
+TRANSLATE_MODEL = os.environ.get("TRANSLATE_MODEL", "Helsinki-NLP/opus-mt-th-en")
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 SENTIMENT_MODEL = os.environ.get(
     "SENTIMENT_MODEL", "cardiffnlp/twitter-roberta-base-sentiment-latest"

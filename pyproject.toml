@@ -23,6 +23,7 @@ dependencies = [
     "scikit-learn==1.7.2",
     "sentence-transformers==6.0.0",
     "transformers==5.4.0",
+    "sentencepiece==0.2.3",
     "bertopic==0.17.4",
     "hdbscan==0.8.44",
     "umap-learn==0.5.12",
